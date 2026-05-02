@@ -1,101 +1,107 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
+
+export default function LandingPage() {
+  const router = useRouter()
+  const [url, setUrl] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+
+    let cleanUrl = url.trim()
+    if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+      cleanUrl = 'https://' + cleanUrl
+    }
+
+    try {
+      new URL(cleanUrl)
+    } catch {
+      setError('אנא הכנס כתובת אתר תקינה')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const { data, error: dbError } = await supabase
+        .from('users')
+        .insert({ website_url: cleanUrl })
+        .select('id')
+        .single()
+
+      if (dbError) throw dbError
+
+      localStorage.setItem('user_id', data.id)
+      localStorage.setItem('website_url', cleanUrl)
+      router.push('/survey')
+    } catch (err) {
+      setError('אירעה שגיאה. אנא נסה שוב.')
+      setLoading(false)
+    }
+  }
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <main className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
+      <div className="w-full max-w-2xl mx-auto text-center">
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        {/* Hero */}
+        <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-4">
+          תן לנו 30 שניות —<br />
+          <span className="text-indigo-600">נחזיר לך שבוע של תוכן</span>
+        </h1>
+        <p className="text-lg md:text-xl text-gray-600 mb-10 leading-relaxed">
+          מדביקים קישור לאתר שלך. הבינה המלאכותית מנתחת את העסק שלך<br className="hidden md:block" />
+          ויוצרת 3 פוסטים מוכנים לפרסום — בסגנון שלך, בעברית.
+        </p>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 justify-center">
+          <input
+            type="text"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="הכנס את כתובת האתר / דף הנחיתה שלך"
+            className="flex-1 px-5 py-4 text-base rounded-xl border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-right bg-white"
+            disabled={loading}
+            dir="ltr"
+          />
+          <button
+            type="submit"
+            disabled={loading || !url.trim()}
+            className="px-8 py-4 bg-indigo-600 text-white font-bold text-base rounded-xl shadow-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
           >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            {loading ? 'שומר...' : 'צור לי תוכן עכשיו'}
+          </button>
+        </form>
+
+        {error && (
+          <p className="mt-3 text-red-500 text-sm">{error}</p>
+        )}
+
+        {/* Social proof */}
+        <p className="mt-8 text-gray-400 text-sm">
+          כבר עשרות בעלי עסקים קיבלו תוכן מוכן ✓
+        </p>
+
+        {/* Mock post examples */}
+        <div className="mt-14 grid grid-cols-1 sm:grid-cols-3 gap-4 text-right">
+          {[
+            { type: 'ערך', color: 'bg-blue-50 border-blue-200', text: '3 דברים שכל מאמן צריך לדעת לפני שפותח עמוד עסקי...' },
+            { type: 'אמון', color: 'bg-purple-50 border-purple-200', text: 'לפני 2 שנים פחדתי לבקש תשלום על הייעוץ שלי. היום אני עוזר ל-40 לקוחות...' },
+            { type: 'קריאה לפעולה', color: 'bg-green-50 border-green-200', text: 'אם אתה יועץ ורוצה להכפיל את הלקוחות שלך — יש לי מקום ל-3 נוספים החודש.' },
+          ].map((post) => (
+            <div key={post.type} className={`${post.color} border rounded-xl p-4 text-sm text-gray-700`}>
+              <span className="text-xs font-semibold text-gray-400 block mb-2">{post.type}</span>
+              {post.text}
+            </div>
+          ))}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+      </div>
+    </main>
+  )
 }
