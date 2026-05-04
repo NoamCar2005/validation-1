@@ -1,14 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 
 export default function LandingPage() {
   const router = useRouter()
+  const supabase = createClient()
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.replace('/auth')
+      }
+    }
+    checkAuth()
+  }, [router, supabase.auth])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -28,9 +39,15 @@ export default function LandingPage() {
 
     setLoading(true)
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.replace('/auth')
+        return
+      }
+
       const { data, error: dbError } = await supabase
         .from('users')
-        .insert({ website_url: cleanUrl })
+        .insert({ website_url: cleanUrl, auth_user_id: user.id })
         .select('id')
         .single()
 

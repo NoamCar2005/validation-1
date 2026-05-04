@@ -1,0 +1,187 @@
+{
+  "name": "generate-value-post",
+  "description": "Sub-workflow: Generates a value-type Hebrew social media post with copywriter agent, image prompt generation, and image API call",
+  "active": false,
+  "nodes": [
+    {
+      "id": "n8n-nodes-base.workflowTriggerNode.uuid1",
+      "name": "When called by another workflow",
+      "type": "n8n-nodes-base.workflowTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {}
+    },
+    {
+      "id": "n8n-nodes-base.code.uuid2",
+      "name": "Parse Inputs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "parameters": {
+        "jsCode": "return {\n  json: {\n    business_profile: JSON.parse($input.item.json.business_profile),\n    post_plan: JSON.parse($input.item.json.post_plan),\n    post_type: $input.item.json.post_type\n  }\n};"
+      }
+    },
+    {
+      "id": "n8n-nodes-base.ai.agent.uuid3",
+      "name": "Copywriter Agent",
+      "type": "n8n-nodes-base.openaiChatModel",
+      "typeVersion": 1,
+      "position": [750, 300],
+      "parameters": {
+        "model": "claude-sonnet-4-5",
+        "systemPrompt": "You are an expert Hebrew social media copywriter specializing in content for Israeli business owners.\n\nYou will receive a business profile and a post plan. Write a ready-to-publish social media post.\n\nThis is a VALUE post — it teaches something useful from the owner's expertise. It should feel like genuine advice from the owner, not an ad.\n\nRules:\n- Write entirely in Hebrew\n- Match the tone and voice from the business profile\n- Use the hook from the post plan as the opening line\n- The post should be 100-200 words\n- End with a natural, non-pushy close\n- Decide the best channel: instagram (casual, visual, shorter), linkedin (professional, story-driven), facebook (warm, community-feel)\n- Output ONLY valid JSON — no explanation, no markdown, no code blocks\n\nOutput this exact JSON structure:\n{\n  \"content\": \"\",\n  \"copy\": \"\",\n  \"channel_recommended\": \"instagram | linkedin | facebook\"\n}\n\nWhere:\n- content = the full post text in Hebrew, ready to publish\n- copy = a 1-line hook/tagline in Hebrew (can be the same as the hook or a refined version)\n- channel_recommended = the best platform for this post",
+        "prompt": "Business profile:\n{{ JSON.stringify($('Parse Inputs').item.json.business_profile) }}\n\nPost plan:\n{{ JSON.stringify($('Parse Inputs').item.json.post_plan) }}\n\nWrite the value post."
+      }
+    },
+    {
+      "id": "n8n-nodes-base.code.uuid4",
+      "name": "Parse Post Copy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 300],
+      "parameters": {
+        "jsCode": "const raw = $input.item.json.output || $input.item.json.text || $input.item.json.message;\nconst cleaned = raw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\nconst post = JSON.parse(cleaned);\nreturn {\n  json: {\n    ...post,\n    post_type: $('Parse Inputs').item.json.post_type,\n    image_direction: $('Parse Inputs').item.json.post_plan.image_direction,\n    channel_recommended: post.channel_recommended\n  }\n};"
+      }
+    },
+    {
+      "id": "n8n-nodes-base.ai.agent.uuid5",
+      "name": "Image Prompt Agent",
+      "type": "n8n-nodes-base.openaiChatModel",
+      "typeVersion": 1,
+      "position": [1250, 300],
+      "parameters": {
+        "model": "claude-sonnet-4-5",
+        "systemPrompt": "You are an expert at writing prompts for AI image generation models.\n\nYou will receive a social media post and an image direction. Write a detailed, optimized English prompt for an image generation model (DALL-E, Midjourney, or similar).\n\nRules:\n- Write the prompt in English\n- Be specific: include subject, style, lighting, mood, composition\n- Match the channel: instagram = square 1:1, linkedin = landscape 16:9, facebook = square or landscape\n- The image should feel authentic and professional, not stock-photo generic\n- Avoid text in the image\n- Output ONLY valid JSON — no explanation, no markdown, no code blocks\n\nOutput this exact JSON structure:\n{ \"image_prompt\": \"\" }",
+        "prompt": "Post content (Hebrew):\n{{ $('Parse Post Copy').item.json.content }}\n\nImage direction from marketing plan:\n{{ $('Parse Post Copy').item.json.image_direction }}\n\nChannel: {{ $('Parse Post Copy').item.json.channel_recommended }}\n\nWrite the image generation prompt."
+      }
+    },
+    {
+      "id": "n8n-nodes-base.code.uuid6",
+      "name": "Parse Image Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1500, 300],
+      "parameters": {
+        "jsCode": "const raw = $input.item.json.output || $input.item.json.text || $input.item.json.message;\nconst cleaned = raw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\nconst result = JSON.parse(cleaned);\nreturn { json: { image_prompt: result.image_prompt } };"
+      }
+    },
+    {
+      "id": "n8n-nodes-base.httpRequest.uuid7",
+      "name": "Image API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1750, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/images/generations",
+        "authentication": "genericCredentialType",
+        "genericCredentialType": "httpHeaderAuth",
+        "headerParameters": {
+          "Authorization": "Bearer YOUR_OPENAI_API_KEY"
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "model": "dall-e-3",
+          "prompt": "={{ $('Parse Image Prompt').item.json.image_prompt }}",
+          "n": 1,
+          "size": "1024x1024"
+        },
+        "options": {
+          "response": {
+            "keepOnlyProperties": []
+          }
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n8n-nodes-base.code.uuid8",
+      "name": "Format Post Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 300],
+      "parameters": {
+        "jsCode": "let image_url = null;\ntry {\n  image_url = $input.item.json.data?.[0]?.url || null;\n} catch (e) {\n  image_url = null;\n}\n\nreturn {\n  json: {\n    post_type: $('Parse Inputs').item.json.post_type,\n    content: $('Parse Post Copy').item.json.content,\n    copy: $('Parse Post Copy').item.json.copy,\n    channel_recommended: $('Parse Post Copy').item.json.channel_recommended,\n    image_url\n  }\n};"
+      }
+    }
+  ],
+  "connections": {
+    "When called by another workflow": {
+      "main": [
+        [
+          {
+            "node": "Parse Inputs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Inputs": {
+      "main": [
+        [
+          {
+            "node": "Copywriter Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copywriter Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse Post Copy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Post Copy": {
+      "main": [
+        [
+          {
+            "node": "Image Prompt Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image Prompt Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse Image Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Image Prompt": {
+      "main": [
+        [
+          {
+            "node": "Image API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image API": {
+      "main": [
+        [
+          {
+            "node": "Format Post Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { SURVEY_QUESTIONS } from '@/lib/survey-questions'
 import SurveyForm from '@/components/SurveyForm'
 
 export default function SurveyPage() {
   const router = useRouter()
+  const supabase = createClient()
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -22,8 +23,7 @@ export default function SurveyPage() {
     .filter((q) => q.required)
     .every((q) => answers[q.key]?.trim())
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleSubmit() {
     if (!requiredAnswered) return
 
     setLoading(true)
@@ -56,7 +56,7 @@ export default function SurveyPage() {
   }
 
   return (
-    <main className="min-h-screen px-4 py-12">
+    <main className="min-h-screen px-4 py-12" dir="rtl">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-10">
           <h1 className="text-3xl font-extrabold text-gray-900 mb-3">
@@ -67,7 +67,7 @@ export default function SurveyPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <div>
           <SurveyForm
             questions={SURVEY_QUESTIONS}
             answers={answers}
@@ -76,19 +76,20 @@ export default function SurveyPage() {
 
           {error && <p className="mt-4 text-red-500 text-sm text-center">{error}</p>}
 
-          <div className="mt-8 text-center">
+          <div className="mt-10 text-center">
             <button
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               disabled={!requiredAnswered || loading}
-              className="px-10 py-4 bg-indigo-600 text-white font-bold text-base rounded-xl shadow-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full px-10 py-4 bg-indigo-600 text-white font-bold text-base rounded-xl shadow-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? 'שומר...' : 'צור לי תוכן עכשיו ←'}
             </button>
             <p className="mt-3 text-xs text-gray-400">
-              {SURVEY_QUESTIONS.filter((q) => q.required && answers[q.key]).length} / {SURVEY_QUESTIONS.filter((q) => q.required).length} שאלות חובה ענית
+              {SURVEY_QUESTIONS.filter((q) => q.required && answers[q.key]?.trim()).length} / {SURVEY_QUESTIONS.filter((q) => q.required).length} שאלות חובה ענית
             </p>
           </div>
-        </form>
+        </div>
       </div>
     </main>
   )

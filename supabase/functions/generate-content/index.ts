@@ -65,36 +65,28 @@ Deno.serve(async (req) => {
       throw new Error(`N8N returned ${n8nResponse.status}`)
     }
 
-    const n8nData = await n8nResponse.json()
+    // N8N handles content generation, image creation, and inserts posts with image_url into Supabase
+    // We just wait for it to finish, then read the posts directly from the DB
+    await n8nResponse.json()
 
-    if (!n8nData.posts || !Array.isArray(n8nData.posts) || n8nData.posts.length !== 3) {
-      throw new Error('N8N response format invalid')
-    }
+    const { data: posts, error: fetchError } = await supabase
+      .from('posts')
+      .select('post_type, content, copy, image_url, channel_recommended')
+      .eq('user_id', user_id)
+      .order('id', { ascending: false })
+      .limit(3)
 
-    // Save posts to Supabase
-    const postsToInsert = n8nData.posts.map((p: {
-      post_type: string
-      content: string
-      copy: string
-      image_url?: string
-      channel_recommended: string
-    }) => ({
-      user_id,
-      post_type: p.post_type,
-      content: p.content,
-      copy: p.copy,
-      image_url: p.image_url ?? null,
-      channel_recommended: p.channel_recommended,
+    if (fetchError) throw fetchError
+    if (!posts || posts.length !== 3) throw new Error('Posts not found after generation')
+
+    // Attach image URLs constructed from predictable storage path
+    const postsWithImages = posts.map((p) => ({
+      ...p,
+      image_url: `${supabaseUrl}/storage/v1/object/public/Validation/${user_id}/${p.post_type}.png`,
     }))
 
-    const { error: insertError } = await supabase
-      .from('posts')
-      .insert(postsToInsert)
-
-    if (insertError) throw insertError
-
     return new Response(
-      JSON.stringify({ posts: n8nData.posts }),
+      JSON.stringify({ posts: postsWithImages }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err) {

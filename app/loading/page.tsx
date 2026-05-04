@@ -2,10 +2,12 @@
 
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import LoadingMessages from '@/components/LoadingMessages'
 
 export default function LoadingPage() {
   const router = useRouter()
+  const supabase = createClient()
   const called = useRef(false)
 
   useEffect(() => {
@@ -22,13 +24,16 @@ export default function LoadingPage() {
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
         const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
+        const { data: { session } } = await supabase.auth.getSession()
+        const accessToken = session?.access_token ?? supabaseAnonKey
+
         const res = await fetch(
           `${supabaseUrl}/functions/v1/generate-content`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${supabaseAnonKey}`,
+              'Authorization': `Bearer ${accessToken}`,
             },
             body: JSON.stringify({ user_id: userId }),
           }
