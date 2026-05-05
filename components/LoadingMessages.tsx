@@ -3,12 +3,15 @@
 import { useEffect, useState } from 'react'
 
 const MESSAGES = [
-  'סורק את העסק שלך...',
-  'מבין את הסגנון שלך...',
+  'סורק את האתר שלך...',
+  'מנתח את תחום הפעילות שלך...',
+  'מבין את הסגנון והקול שלך...',
   'מזהה את נקודות החוזק שלך...',
-  'יוצר תוכן בקול שלך...',
-  'מכין פוסטים מוכנים לפרסום...',
-  'עוד רגע קט...',
+  'בונה אסטרטגיית תוכן מותאמת...',
+  'יוצר פוסטים בקול שלך...',
+  'מכין תמונות לכל פוסט...',
+  'מוסיף לוגיקה שיווקית...',
+  'עוד קצת... זה שווה את ההמתנה ✨',
 ]
 
 export default function LoadingMessages() {
@@ -19,25 +22,25 @@ export default function LoadingMessages() {
     const interval = setInterval(() => {
       setVisible(false)
       setTimeout(() => {
-        setIndex((i) => (i + 1) % MESSAGES.length)
+        setIndex(i => (i + 1) % MESSAGES.length)
         setVisible(true)
-      }, 400)
-    }, 3000)
+      }, 350)
+    }, 3500)
     return () => clearInterval(interval)
   }, [])
 
   return (
-    <div className="text-center">
-      <div className="flex justify-center mb-8">
-        <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-      </div>
-      <p
-        className={`text-xl font-semibold text-gray-700 transition-opacity duration-400 ${
-          visible ? 'opacity-100' : 'opacity-0'
-        }`}
-      >
-        {MESSAGES[index]}
-      </p>
-    </div>
+    <p
+      className="msg-fade"
+      style={{
+        fontSize: 18,
+        fontWeight: 600,
+        color: 'var(--accent)',
+        minHeight: 28,
+        opacity: visible ? 1 : 0,
+      }}
+    >
+      {MESSAGES[index]}
+    </p>
   )
 }

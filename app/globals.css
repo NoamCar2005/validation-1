@@ -2,10 +2,158 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap');
+/* ─── Design tokens ── */
+:root {
+  --navy: #0D0F1A;
+  --navy-mid: #161929;
+  --navy-light: #1E2235;
+  --accent: #F5A623;
+  --accent-hover: #E8951A;
+  --indigo: #4F5BD5;
+  --indigo-hover: #3D49C8;
+  --green: #25D366;
+  --green-hover: #1DB954;
+  --body-bg: #F7F6F2;
+  --text-primary: #0D0F1A;
+  --text-secondary: #5A5F7A;
+  --text-muted: #9DA3BE;
+  --border: #E8E7E2;
+  --border-focus: #4F5BD5;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --shadow-card: 0 2px 16px rgba(13,15,26,0.07), 0 1px 4px rgba(13,15,26,0.05);
+  --shadow-card-hover: 0 8px 32px rgba(13,15,26,0.12), 0 2px 8px rgba(13,15,26,0.08);
+  --shadow-btn: 0 4px 16px rgba(79,91,213,0.3);
+  --shadow-btn-accent: 0 4px 16px rgba(245,166,35,0.35);
+}
 
 body {
   font-family: 'Heebo', sans-serif;
-  background-color: #f8f9fc;
-  color: #1a1a2e;
+  background-color: var(--body-bg);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ─── Keyframes ── */
+@keyframes screenIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseRing {
+  0%   { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245,166,35,0.4); }
+  50%       { box-shadow: 0 0 0 10px rgba(245,166,35,0); }
+}
+
+@keyframes cardReveal {
+  from { opacity: 0; transform: translateY(32px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes spinnerAnim {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(32px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ─── Utility animation classes ── */
+.screen-enter {
+  animation: screenIn 0.4s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.card-reveal {
+  animation: cardReveal 0.55s cubic-bezier(0.16,1,0.3,1) both;
+}
+.card-reveal:nth-child(2) { animation-delay: 0.12s; }
+.card-reveal:nth-child(3) { animation-delay: 0.24s; }
+
+/* Hero lines stagger in with same screenIn motion, staggered by child order */
+.hero-line {
+  animation: screenIn 0.7s cubic-bezier(0.16,1,0.3,1) both;
+}
+.hero-line:nth-child(2) { animation-delay: 0.1s; }
+.hero-line:nth-child(3) { animation-delay: 0.2s; }
+.hero-line:nth-child(4) { animation-delay: 0.3s; }
+
+.modal-animate {
+  animation: modalIn 0.35s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+/* 0.85s — intentionally slower than Tailwind's animate-spin (1s) for a dramatic effect */
+.spinner-ring {
+  animation: spinnerAnim 0.85s linear infinite;
+}
+
+.pulse-ring {
+  animation: pulseRing 2s ease-out infinite;
+}
+
+.pulse-ring-delayed {
+  animation: pulseRing 2s ease-out infinite 0.7s;
+}
+
+.glow-pulse {
+  animation: glowPulse 2s ease infinite;
+}
+
+.msg-fade {
+  transition: opacity 0.35s ease;
+}
+
+.progress-bar-animate {
+  transition: width 0.5s ease;
+}
+
+/* ─── Survey options (needs @layer components for Tailwind specificity) ── */
+@layer components {
+  .survey-option {
+    transition: all 0.15s ease;
+  }
+  .survey-option:hover:not(.selected) {
+    border-color: var(--indigo);
+    background: #f0f1fb;
+    transform: translateX(-2px);
+  }
+  .survey-option.selected {
+    border-color: var(--indigo);
+    background: var(--indigo);
+    color: white;
+  }
+}
+
+/* ─── Channel badges ── */
+.badge-instagram { background: #fce4ec; color: #c2185b; }
+.badge-linkedin  { background: #e3f2fd; color: #1565c0; }
+.badge-facebook  { background: #ede7f6; color: #4527a0; }
+
+/* ─── Image placeholder ── */
+.img-placeholder {
+  width: 100%;
+  aspect-ratio: 1/1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+.img-placeholder::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(79,91,213,0.08) 0%, rgba(245,166,35,0.08) 100%);
 }

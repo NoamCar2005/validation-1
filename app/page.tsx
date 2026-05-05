@@ -1,24 +1,57 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+export const dynamic = 'force-dynamic'
+
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import TopBar from '@/components/TopBar'
+
+const MOCK_POSTS = [
+  {
+    post_type: 'value' as const,
+    channel: 'linkedin',
+    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    icon: '💡',
+    label: '💡 ערך מקצועי',
+    badgeClass: 'badge-linkedin',
+    badgeLabel: 'לינקדאין',
+    text: '3 דברים שלמדתי אחרי 5 שנים בשיווק עסקים קטנים:\n\n1️⃣ הלקוחות הטובים ביותר מגיעים מהמוניטין שלך\n\n2️⃣ עקביות ניצחת תמיד את השלמות\n\n3️⃣ האנשים שיגידו "לא" הם אלה שיספרו עליך',
+  },
+  {
+    post_type: 'trust' as const,
+    channel: 'instagram',
+    gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    icon: '🤝',
+    label: '🤝 בניית אמון',
+    badgeClass: 'badge-instagram',
+    badgeLabel: 'אינסטגרם',
+    text: 'לפני שנה פחדתי לבקש ₪3,000 על ייעוץ.\n\nהיום אני עובד עם 12 עסקים בו-זמנית, המחיר שלי גדל פי 3.\n\nמה השתנה? הפסקתי למכור. התחלתי לתת ערך.',
+  },
+  {
+    post_type: 'cta' as const,
+    channel: 'facebook',
+    gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    icon: '🎯',
+    label: '🎯 קריאה לפעולה',
+    badgeClass: 'badge-facebook',
+    badgeLabel: 'פייסבוק',
+    text: 'אם אתה יועץ, מאמן, או פרילנסר — ואתה מרגיש שהתוכן שלך לא ממצב אותך ברמה שאתה ראוי לה:\n\nיש לי מקום ל-2 לקוחות חדשים החודש.',
+  },
+]
 
 export default function LandingPage() {
   const router = useRouter()
   const supabase = createClient()
+  const heroRef = useRef<HTMLElement>(null)
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        router.replace('/auth')
-      }
-    }
-    checkAuth()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) router.replace('/auth')
+    })
   }, [router, supabase.auth])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -29,7 +62,6 @@ export default function LandingPage() {
     if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
       cleanUrl = 'https://' + cleanUrl
     }
-
     try {
       new URL(cleanUrl)
     } catch {
@@ -40,10 +72,7 @@ export default function LandingPage() {
     setLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.replace('/auth')
-        return
-      }
+      if (!user) { router.replace('/auth'); return }
 
       const { data, error: dbError } = await supabase
         .from('users')
@@ -56,69 +85,207 @@ export default function LandingPage() {
       localStorage.setItem('user_id', data.id)
       localStorage.setItem('website_url', cleanUrl)
       router.push('/survey')
-    } catch (err) {
+    } catch {
       setError('אירעה שגיאה. אנא נסה שוב.')
       setLoading(false)
     }
   }
 
+  function scrollToHero() {
+    heroRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
-      <div className="w-full max-w-2xl mx-auto text-center">
+    <div className="screen-enter" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <TopBar dark />
 
-        {/* Hero */}
-        <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-4">
-          תן לנו 30 שניות —<br />
-          <span className="text-indigo-600">נחזיר לך שבוע של תוכן</span>
-        </h1>
-        <p className="text-lg md:text-xl text-gray-600 mb-10 leading-relaxed">
-          מדביקים קישור לאתר שלך. הבינה המלאכותית מנתחת את העסק שלך<br className="hidden md:block" />
-          ויוצרת 3 פוסטים מוכנים לפרסום — בסגנון שלך, בעברית.
-        </p>
+      {/* Hero */}
+      <section
+        ref={heroRef}
+        style={{
+          background: 'linear-gradient(155deg, var(--navy) 0%, #1a1c35 60%, #12142a 100%)',
+          padding: 'clamp(60px, 10vw, 96px) 24px clamp(70px, 12vw, 110px)',
+          position: 'relative', overflow: 'hidden',
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+        }}
+      >
+        {/* Glow orb */}
+        <div style={{
+          position: 'absolute', top: -80, left: '50%', transform: 'translateX(-50%)',
+          width: 600, height: 600, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(79,91,213,0.15) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 justify-center">
-          <input
-            type="text"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="הכנס את כתובת האתר / דף הנחיתה שלך"
-            className="flex-1 px-5 py-4 text-base rounded-xl border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-right bg-white"
-            disabled={loading}
-            dir="ltr"
-          />
-          <button
-            type="submit"
-            disabled={loading || !url.trim()}
-            className="px-8 py-4 bg-indigo-600 text-white font-bold text-base rounded-xl shadow-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+        <div style={{ maxWidth: 700, textAlign: 'center', position: 'relative' }}>
+          <h1 className="hero-line" style={{
+            fontSize: 'clamp(34px, 7vw, 64px)', fontWeight: 900,
+            lineHeight: 1.1, letterSpacing: '-0.03em', color: 'white', marginBottom: 8,
+          }}>
+            תן לנו 30 שניות —
+          </h1>
+          <h1 className="hero-line" style={{
+            fontSize: 'clamp(34px, 7vw, 64px)', fontWeight: 900,
+            lineHeight: 1.1, letterSpacing: '-0.03em',
+            color: 'var(--accent)', marginBottom: 24,
+          }}>
+            נחזיר לך שבוע של תוכן
+          </h1>
+          <p className="hero-line" style={{
+            fontSize: 'clamp(16px, 2.5vw, 19px)',
+            color: 'rgba(255,255,255,0.6)', lineHeight: 1.7,
+            maxWidth: 540, margin: '0 auto 40px',
+          }}>
+            מדביקים קישור לאתר שלך. הבינה המלאכותית מנתחת את העסק שלך
+            ויוצרת 3 פוסטים מוכנים לפרסום — בסגנון שלך, בעברית.
+          </p>
+
+          <form
+            onSubmit={handleSubmit}
+            className="hero-line"
+            style={{ display: 'flex', gap: 10, maxWidth: 600, margin: '0 auto', flexWrap: 'wrap' }}
           >
-            {loading ? 'שומר...' : 'צור לי תוכן עכשיו'}
-          </button>
-        </form>
+            <input
+              type="text"
+              value={url}
+              onChange={e => setUrl(e.target.value)}
+              placeholder="הדביקו כתובת אתר — למשל: yoursite.co.il"
+              dir="ltr"
+              disabled={loading}
+              style={{
+                flex: 1, minWidth: 200, padding: '16px 20px',
+                background: 'rgba(255,255,255,0.1)',
+                border: '1.5px solid rgba(255,255,255,0.2)',
+                borderRadius: 14, fontSize: 15, color: 'white', outline: 'none',
+                fontFamily: 'inherit', transition: 'border-color 0.15s ease',
+              }}
+              onFocus={e => (e.target.style.borderColor = 'rgba(255,255,255,0.5)')}
+              onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.2)')}
+            />
+            <button
+              type="submit"
+              disabled={loading || !url.trim()}
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                background: 'var(--accent)', color: 'var(--navy)',
+                fontFamily: 'inherit', fontWeight: 800, fontSize: 16,
+                border: 'none', borderRadius: 14, padding: '16px 28px', cursor: 'pointer',
+                boxShadow: 'var(--shadow-btn-accent)', transition: 'all 0.18s ease',
+                whiteSpace: 'nowrap',
+                opacity: loading || !url.trim() ? 0.45 : 1,
+              }}
+            >
+              {loading ? '...' : 'צור לי תוכן עכשיו ⚡'}
+            </button>
+          </form>
 
-        {error && (
-          <p className="mt-3 text-red-500 text-sm">{error}</p>
-        )}
+          {error && (
+            <p style={{ marginTop: 12, color: '#fca5a5', fontSize: 14 }}>{error}</p>
+          )}
 
-        {/* Social proof */}
-        <p className="mt-8 text-gray-400 text-sm">
-          כבר עשרות בעלי עסקים קיבלו תוכן מוכן ✓
-        </p>
-
-        {/* Mock post examples */}
-        <div className="mt-14 grid grid-cols-1 sm:grid-cols-3 gap-4 text-right">
-          {[
-            { type: 'ערך', color: 'bg-blue-50 border-blue-200', text: '3 דברים שכל מאמן צריך לדעת לפני שפותח עמוד עסקי...' },
-            { type: 'אמון', color: 'bg-purple-50 border-purple-200', text: 'לפני 2 שנים פחדתי לבקש תשלום על הייעוץ שלי. היום אני עוזר ל-40 לקוחות...' },
-            { type: 'קריאה לפעולה', color: 'bg-green-50 border-green-200', text: 'אם אתה יועץ ורוצה להכפיל את הלקוחות שלך — יש לי מקום ל-3 נוספים החודש.' },
-          ].map((post) => (
-            <div key={post.type} className={`${post.color} border rounded-xl p-4 text-sm text-gray-700`}>
-              <span className="text-xs font-semibold text-gray-400 block mb-2">{post.type}</span>
-              {post.text}
-            </div>
-          ))}
+          <div className="hero-line" style={{ marginTop: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+            <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14 }}>
+              כבר <strong style={{ color: 'rgba(255,255,255,0.8)' }}>340+</strong> בעלי עסקים קיבלו תוכן מוכן ✓
+            </span>
+          </div>
         </div>
-      </div>
-    </main>
+      </section>
+
+      {/* Preview section */}
+      <section style={{
+        background: 'var(--body-bg)',
+        padding: 'clamp(50px, 8vw, 80px) 24px',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+      }}>
+        <div style={{ maxWidth: 960, width: '100%' }}>
+          <p style={{
+            textAlign: 'center', fontSize: 12, fontWeight: 700,
+            letterSpacing: '0.12em', textTransform: 'uppercase',
+            color: 'var(--text-muted)', marginBottom: 12,
+          }}>דוגמה לתוצאות</p>
+          <h2 style={{
+            textAlign: 'center',
+            fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: 800,
+            color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: 40,
+          }}>
+            הנה מה שמחכה לך בצד השני
+          </h2>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
+            {MOCK_POSTS.map((post, i) => (
+              <div
+                key={i}
+                style={{
+                  background: 'white', borderRadius: 'var(--radius-lg)',
+                  border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)',
+                  overflow: 'hidden', opacity: 0.9,
+                  transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+                }}
+                onMouseEnter={e => {
+                  const el = e.currentTarget as HTMLDivElement
+                  el.style.boxShadow = 'var(--shadow-card-hover)'
+                  el.style.transform = 'translateY(-2px)'
+                }}
+                onMouseLeave={e => {
+                  const el = e.currentTarget as HTMLDivElement
+                  el.style.boxShadow = 'var(--shadow-card)'
+                  el.style.transform = 'translateY(0)'
+                }}
+              >
+                <div style={{
+                  width: '100%', aspectRatio: '4/3',
+                  background: post.gradient,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 28, opacity: 0.85,
+                }}>
+                  {post.icon}
+                </div>
+                <div style={{ padding: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                      {post.label}
+                    </span>
+                    <span className={post.badgeClass} style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>
+                      {post.badgeLabel}
+                    </span>
+                  </div>
+                  <p style={{
+                    fontSize: 12, lineHeight: 1.7, color: 'var(--text-primary)',
+                    display: '-webkit-box', WebkitLineClamp: 4,
+                    WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                    whiteSpace: 'pre-wrap',
+                  }}>
+                    {post.text}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: 48 }}>
+            <button
+              onClick={scrollToHero}
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                background: 'var(--indigo)', color: 'white',
+                fontFamily: 'inherit', fontWeight: 700, fontSize: 16,
+                border: 'none', borderRadius: 'var(--radius-md)', padding: '16px 32px',
+                cursor: 'pointer', boxShadow: 'var(--shadow-btn)', transition: 'all 0.18s ease',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'var(--indigo-hover)'
+                e.currentTarget.style.transform = 'translateY(-1px)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'var(--indigo)'
+                e.currentTarget.style.transform = 'translateY(0)'
+              }}
+            >
+              צור לי תוכן כזה עכשיו — הדבק את הקישור שלך ↑
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
   )
 }

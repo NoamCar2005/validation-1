@@ -1,201 +1,248 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { SurveyQuestion } from '@/lib/survey-questions'
 
 interface Props {
   questions: SurveyQuestion[]
   answers: Record<string, string>
   onChange: (key: string, value: string) => void
+  onComplete: () => void
 }
 
-export default function SurveyForm({ questions, answers, onChange }: Props) {
+const BLOCK_COLORS: Record<string, string> = {
+  '1': '#4F5BD5',
+  '2': '#7C6FCD',
+  '3': '#B05EC4',
+  '4': '#F5A623',
+}
+
+export default function SurveyForm({ questions, answers, onChange, onComplete }: Props) {
+  const router = useRouter()
   const [currentIndex, setCurrentIndex] = useState(0)
-  const currentQuestion = questions[currentIndex]
-  const isAnswered = answers[currentQuestion.key]?.trim()
+  const currentQ = questions[currentIndex]
   const progress = ((currentIndex + 1) / questions.length) * 100
+  const blockColor = BLOCK_COLORS[currentQ.block] || '#4F5BD5'
 
-  const handleNext = () => {
-    if (isAnswered && currentIndex < questions.length - 1) {
-      setCurrentIndex(currentIndex + 1)
-    }
+  function isAnswered(): boolean {
+    const val = answers[currentQ.key]
+    if (!val) return false
+    if (currentQ.type === 'select-multi') return val.split('|').filter(Boolean).length > 0
+    return val.trim().length > 0
   }
 
-  const handlePrevious = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1)
-    }
-  }
-
-  const handleOptionClick = (value: string) => {
-    if (currentQuestion.type === 'select-multi') {
-      const current = answers[currentQuestion.key] || ''
+  function handleOptionClick(value: string) {
+    if (currentQ.type === 'select-multi') {
+      const current = answers[currentQ.key] || ''
       const values = current ? current.split('|') : []
-      if (values.includes(value)) {
-        const updated = values.filter((v) => v !== value).join('|')
-        onChange(currentQuestion.key, updated)
-      } else {
-        onChange(currentQuestion.key, values.length > 0 ? `${current}|${value}` : value)
-      }
+      const updated = values.includes(value)
+        ? values.filter(v => v !== value).join('|')
+        : values.length > 0 ? `${current}|${value}` : value
+      onChange(currentQ.key, updated)
     } else {
-      onChange(currentQuestion.key, value)
-      setTimeout(() => {
-        if (currentIndex < questions.length - 1) {
-          handleNext()
-        }
-      }, 300)
+      onChange(currentQ.key, value)
+      setTimeout(() => advance(), 280)
     }
   }
 
-  const isMultiSelectAnswered = () => {
-    if (currentQuestion.type !== 'select-multi') return isAnswered
-    return answers[currentQuestion.key]?.split('|').filter(Boolean).length > 0
+  function advance() {
+    if (currentIndex < questions.length - 1) {
+      setCurrentIndex(i => i + 1)
+    } else {
+      onComplete()
+    }
   }
+
+  const isMulti = currentQ.type === 'select-multi' || currentQ.type === 'text'
+  const selectedValues = answers[currentQ.key]?.split('|').filter(Boolean) ?? []
 
   return (
-    <div className="w-full">
-      {/* Progress Bar */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-3">
-          <span className="text-sm font-medium text-gray-600">
-            שאלה {currentIndex + 1} מתוך {questions.length}
-          </span>
-          <span className="text-xs text-gray-500">{Math.round(progress)}%</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
+    <div style={{ minHeight: '100vh', background: 'var(--body-bg)', display: 'flex', flexDirection: 'column' }}>
+      {/* Topbar with progress */}
+      <div style={{
+        background: 'white',
+        borderBottom: '1px solid var(--border)',
+        padding: '14px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14,
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+      }}>
+        <button
+          onClick={() => currentIndex === 0 ? router.push('/') : setCurrentIndex(i => i - 1)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: '#f0f1f5', border: 'none',
+            color: 'var(--text-secondary)', fontFamily: 'inherit',
+            fontWeight: 600, fontSize: 13, padding: '7px 14px',
+            borderRadius: 100, cursor: 'pointer', whiteSpace: 'nowrap',
+          }}
+        >
+          ← {currentIndex === 0 ? 'דף הבית' : 'שאלה קודמת'}
+        </button>
+
+        <div style={{ flex: 1, height: 6, background: '#eee', borderRadius: 10, overflow: 'hidden' }}>
           <div
-            className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${progress}%` }}
+            className="progress-bar-animate"
+            style={{
+              height: '100%',
+              borderRadius: 10,
+              background: `linear-gradient(90deg, ${blockColor}, var(--accent))`,
+              width: `${progress}%`,
+            }}
           />
         </div>
+
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+          {currentIndex + 1} / {questions.length}
+        </span>
+
+        <button
+          onClick={() => router.push('/auth')}
+          style={{
+            background: 'transparent', border: '1px solid var(--border)',
+            color: 'var(--text-muted)', fontFamily: 'inherit',
+            fontWeight: 600, fontSize: 12, padding: '6px 12px',
+            borderRadius: 100, cursor: 'pointer',
+          }}
+        >
+          יציאה
+        </button>
       </div>
 
-      {/* Block Description */}
-      {currentQuestion.blockDescription && (
-        <p className="text-sm text-gray-500 mb-6 text-right">
-          {currentQuestion.blockDescription}
-        </p>
-      )}
-
-      {/* Question */}
-      <div className="mb-8">
-        <label className="block text-xl font-bold text-gray-900 mb-6 text-right">
-          {currentQuestion.label}
-        </label>
-
-        {/* Single Select */}
-        {currentQuestion.type === 'select' && currentQuestion.options ? (
-          <div className="space-y-3">
-            {currentQuestion.options.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => handleOptionClick(option)}
-                className={`w-full px-5 py-4 text-right rounded-lg border-2 transition-all ${
-                  answers[currentQuestion.key] === option
-                    ? 'bg-indigo-600 text-white border-indigo-600 font-medium'
-                    : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400 hover:bg-gray-50'
-                }`}
-              >
-                {option}
-              </button>
-            ))}
+      {/* Question area */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+        <div style={{ width: '100%', maxWidth: 580 }}>
+          {/* Block badge */}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: `${blockColor}18`, borderRadius: 100,
+            padding: '5px 14px', marginBottom: 18,
+          }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: blockColor }} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: blockColor }}>
+              {currentQ.blockTitle}
+            </span>
           </div>
-        ) : null}
 
-        {/* Multi Select */}
-        {currentQuestion.type === 'select-multi' && currentQuestion.options ? (
-          <div className="space-y-3">
-            {currentQuestion.options.map((option) => {
-              const values = answers[currentQuestion.key]?.split('|').filter(Boolean) || []
-              const isSelected = values.includes(option)
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => handleOptionClick(option)}
-                  className={`w-full px-5 py-4 text-right rounded-lg border-2 transition-all flex items-center justify-end gap-3 ${
-                    isSelected
-                      ? 'bg-indigo-600 text-white border-indigo-600 font-medium'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400 hover:bg-gray-50'
-                  }`}
-                >
-                  <span>{option}</span>
-                  <div
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                      isSelected ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'
-                    }`}
+          {/* Question label */}
+          <h2 style={{
+            fontSize: 'clamp(20px, 4vw, 27px)', fontWeight: 800,
+            color: 'var(--text-primary)', marginBottom: 12,
+            lineHeight: 1.3, letterSpacing: '-0.02em',
+          }}>
+            {currentQ.label}
+          </h2>
+
+          {/* Explanation */}
+          {currentQ.explanation && (
+            <div style={{
+              background: 'white', border: '1px solid var(--border)',
+              borderRadius: 12, padding: '13px 16px', marginBottom: 24,
+              borderRight: `3px solid ${blockColor}`,
+            }}>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
+                {currentQ.explanation}
+              </p>
+            </div>
+          )}
+
+          {/* Options */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {(currentQ.type === 'select' || currentQ.type === 'select-multi' || currentQ.type === 'radio') &&
+              currentQ.options?.map(option => {
+                const isSelected = currentQ.type === 'select-multi'
+                  ? selectedValues.includes(option)
+                  : answers[currentQ.key] === option
+
+                return (
+                  <button
+                    key={option}
+                    onClick={() => handleOptionClick(option)}
+                    className={`survey-option${isSelected ? ' selected' : ''}`}
+                    style={{
+                      width: '100%', padding: '15px 18px',
+                      border: `2px solid ${isSelected ? 'var(--indigo)' : 'var(--border)'}`,
+                      borderRadius: 12, textAlign: 'right',
+                      background: isSelected ? 'var(--indigo)' : 'white',
+                      color: isSelected ? 'white' : 'var(--text-primary)',
+                      fontFamily: 'inherit', fontSize: 15, fontWeight: 500,
+                      cursor: 'pointer',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    }}
                   >
-                    {isSelected && <span className="text-white text-sm">✓</span>}
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        ) : null}
+                    <span>{option}</span>
+                    {(currentQ.type === 'select-multi' || currentQ.type === 'radio') && (
+                      <div style={{
+                        width: 20, height: 20,
+                        borderRadius: currentQ.type === 'radio' ? '50%' : 6,
+                        border: `2px solid ${isSelected ? 'rgba(255,255,255,0.5)' : 'var(--border)'}`,
+                        background: isSelected ? 'rgba(255,255,255,0.25)' : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                      }}>
+                        {isSelected && (
+                          <div style={{
+                            width: currentQ.type === 'radio' ? 8 : 10,
+                            height: currentQ.type === 'radio' ? 8 : 10,
+                            borderRadius: currentQ.type === 'radio' ? '50%' : 2,
+                            background: 'white',
+                          }} />
+                        )}
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
 
-        {/* Radio Buttons */}
-        {currentQuestion.type === 'radio' && currentQuestion.options ? (
-          <div className="space-y-3">
-            {currentQuestion.options.map((option) => (
+            {currentQ.type === 'text' && (
+              <input
+                type="text"
+                value={answers[currentQ.key] || ''}
+                onChange={e => onChange(currentQ.key, e.target.value)}
+                placeholder="הקלד כאן..."
+                autoFocus
+                style={{
+                  width: '100%', padding: '18px 20px',
+                  border: '1.5px solid var(--border)', borderRadius: 12,
+                  fontFamily: 'inherit', fontSize: 16, background: 'white',
+                  color: 'var(--text-primary)', outline: 'none',
+                  transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+                }}
+                onFocus={e => {
+                  e.target.style.borderColor = 'var(--border-focus)'
+                  e.target.style.boxShadow = '0 0 0 3px rgba(79,91,213,0.12)'
+                }}
+                onBlur={e => {
+                  e.target.style.borderColor = 'var(--border)'
+                  e.target.style.boxShadow = 'none'
+                }}
+              />
+            )}
+          </div>
+
+          {/* Next button for multi/text */}
+          {isMulti && (
+            <div style={{ marginTop: 30 }}>
               <button
-                key={option}
-                type="button"
-                onClick={() => handleOptionClick(option)}
-                className={`w-full px-5 py-4 text-right rounded-lg border-2 transition-all flex items-center justify-end gap-3 ${
-                  answers[currentQuestion.key] === option
-                    ? 'bg-indigo-600 text-white border-indigo-600 font-medium'
-                    : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400 hover:bg-gray-50'
-                }`}
+                onClick={advance}
+                disabled={!isAnswered()}
+                style={{
+                  width: '100%', padding: '16px', background: 'var(--indigo)', color: 'white',
+                  border: 'none', borderRadius: 14, fontFamily: 'inherit',
+                  fontWeight: 700, fontSize: 16, cursor: 'pointer',
+                  boxShadow: 'var(--shadow-btn)',
+                  opacity: isAnswered() ? 1 : 0.45,
+                  transition: 'all 0.18s ease',
+                }}
               >
-                <span>{option}</span>
-                <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                    answers[currentQuestion.key] === option
-                      ? 'bg-indigo-600 border-indigo-600'
-                      : 'border-gray-300'
-                  }`}
-                >
-                  {answers[currentQuestion.key] === option && (
-                    <div className="w-2 h-2 bg-white rounded-full" />
-                  )}
-                </div>
+                {currentIndex === questions.length - 1 ? 'צור לי תוכן ⚡' : 'הבא →'}
               </button>
-            ))}
-          </div>
-        ) : null}
-
-        {/* Text Input */}
-        {currentQuestion.type === 'text' ? (
-          <input
-            type="text"
-            value={answers[currentQuestion.key] || ''}
-            onChange={(e) => onChange(currentQuestion.key, e.target.value)}
-            placeholder="הקלד כאן..."
-            className="w-full px-5 py-4 text-right rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white text-gray-900"
-            autoFocus
-          />
-        ) : null}
-      </div>
-
-      {/* Navigation Buttons */}
-      <div className="flex gap-3 mt-10">
-        <button
-          type="button"
-          onClick={handlePrevious}
-          disabled={currentIndex === 0}
-          className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          חזור
-        </button>
-        <button
-          type="button"
-          onClick={handleNext}
-          disabled={!isMultiSelectAnswered()}
-          className="flex-1 px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {currentIndex === questions.length - 1 ? 'סיימתי' : 'הבא'}
-        </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
