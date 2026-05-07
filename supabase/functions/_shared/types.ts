@@ -12,7 +12,7 @@ export interface BusinessProfile {
   target_audience: string
   core_offer: string
   key_differentiators: string[]
-  tone_and_voice: 'formal' | 'casual' | 'inspirational' | 'professional'
+  tone_and_voice: 'formal' | 'casual' | 'inspirational' | 'professional' | string
   notable_phrases: string[]
   pain_points_addressed: string[]
   survey_insights: {
@@ -44,6 +44,6 @@ export interface GeneratedPost {
   content: string
   copy: string
   channel_recommended: Channel
-  image_prompt: string
+  image_prompt?: string
   image_url: string | null
 }
