@@ -96,11 +96,12 @@ export default function LandingPage() {
       if (!user) { router.replace('/auth'); return }
 
       // Check for existing user to detect URL change
-      const { data: existing } = await supabase
+      const { data: existing, error: lookupError } = await supabase
         .from('users')
         .select('id, website_url')
         .eq('auth_user_id', user.id)
         .maybeSingle()
+      if (lookupError) console.warn('user lookup failed', lookupError)
 
       const urlChanged = !!existing && existing.website_url !== cleanUrl
 
@@ -124,6 +125,7 @@ export default function LandingPage() {
       router.push('/survey')
     } catch {
       setError('אירעה שגיאה. אנא נסה שוב.')
+    } finally {
       setLoading(false)
     }
   }
