@@ -11,19 +11,20 @@ interface Props {
   onComplete: () => void
 }
 
-const BLOCK_COLORS: Record<string, string> = {
-  '1': '#4F5BD5',
-  '2': '#7C6FCD',
-  '3': '#B05EC4',
-  '4': '#F5A623',
+const BLOCK_COLORS: Record<string, { main: string; soft: string }> = {
+  '1': { main: '#4F5BD5', soft: 'rgba(79,91,213,0.1)' },
+  '2': { main: '#7C6FCD', soft: 'rgba(124,111,205,0.1)' },
+  '3': { main: '#B05EC4', soft: 'rgba(176,94,196,0.1)' },
+  '4': { main: '#F5A623', soft: 'rgba(245,166,35,0.12)' },
 }
 
 export default function SurveyForm({ questions, answers, onChange, onComplete }: Props) {
   const router = useRouter()
   const [currentIndex, setCurrentIndex] = useState(0)
   const currentQ = questions[currentIndex]
+  // Starts at 0% on question 1
   const progress = (currentIndex / questions.length) * 100
-  const blockColor = BLOCK_COLORS[currentQ.block] || '#4F5BD5'
+  const { main: blockColor, soft: blockSoft } = BLOCK_COLORS[currentQ.block] || BLOCK_COLORS['1']
 
   function isAnswered(): boolean {
     const val = answers[currentQ.key]
@@ -55,83 +56,100 @@ export default function SurveyForm({ questions, answers, onChange, onComplete }:
   }
 
   const selectedValues = answers[currentQ.key]?.split('|').filter(Boolean) ?? []
+  const isLast = currentIndex === questions.length - 1
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--body-bg)', display: 'flex', flexDirection: 'column' }}>
-      {/* Topbar with progress */}
+
+      {/* ── Sticky topbar ───────────────────────── */}
       <div style={{
+        position: 'sticky', top: 0, zIndex: 100,
         background: 'white',
         borderBottom: '1px solid var(--border)',
-        padding: '14px 20px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 14,
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
+        boxShadow: '0 1px 8px rgba(12,14,29,0.05)',
       }}>
-        <button
-          onClick={() => currentIndex === 0 ? router.push('/') : setCurrentIndex(i => i - 1)}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: '#f0f1f5', border: 'none',
-            color: 'var(--text-secondary)', fontFamily: 'inherit',
-            fontWeight: 600, fontSize: 13, padding: '7px 14px',
-            borderRadius: 100, cursor: 'pointer', whiteSpace: 'nowrap',
-          }}
-        >
-          ← {currentIndex === 0 ? 'דף הבית' : 'שאלה קודמת'}
-        </button>
-
-        <div style={{ flex: 1, height: 6, background: '#eee', borderRadius: 10, overflow: 'hidden' }}>
+        {/* Coloured progress stripe */}
+        <div style={{ height: 3, background: 'var(--border)', overflow: 'hidden' }}>
           <div
             className="progress-bar-animate"
             style={{
               height: '100%',
-              borderRadius: 10,
               background: `linear-gradient(90deg, ${blockColor}, var(--accent))`,
               width: `${progress}%`,
             }}
           />
         </div>
 
-        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-          {currentIndex + 1} / {questions.length}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px' }}>
+          {/* Back */}
+          <button
+            onClick={() => currentIndex === 0 ? router.push('/') : setCurrentIndex(i => i - 1)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              background: '#f2f1ee', border: 'none',
+              color: 'var(--text-secondary)', fontFamily: 'inherit',
+              fontWeight: 600, fontSize: 13, padding: '7px 14px',
+              borderRadius: 100, cursor: 'pointer', whiteSpace: 'nowrap',
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#e8e6e2')}
+            onMouseLeave={e => (e.currentTarget.style.background = '#f2f1ee')}
+          >
+            ← {currentIndex === 0 ? 'דף הבית' : 'חזור'}
+          </button>
 
-        <button
-          onClick={() => router.push('/')}
-          style={{
-            background: 'transparent', border: '1px solid var(--border)',
-            color: 'var(--text-muted)', fontFamily: 'inherit',
-            fontWeight: 600, fontSize: 12, padding: '6px 12px',
-            borderRadius: 100, cursor: 'pointer',
-          }}
-        >
-          יציאה
-        </button>
+          {/* Progress dots */}
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: 5 }}>
+            {questions.map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  width: i === currentIndex ? 18 : 6,
+                  height: 6,
+                  borderRadius: 100,
+                  background: i <= currentIndex ? blockColor : 'var(--border)',
+                  transition: 'all 0.3s ease',
+                  opacity: i > currentIndex ? 0.5 : 1,
+                }}
+              />
+            ))}
+          </div>
+
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+            {currentIndex + 1} / {questions.length}
+          </span>
+        </div>
       </div>
 
-      {/* Question area */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
-        <div style={{ width: '100%', maxWidth: 580 }}>
+      {/* ── Question ────────────────────────────── */}
+      <div style={{
+        flex: 1, display: 'flex',
+        alignItems: 'flex-start', justifyContent: 'center',
+        padding: 'clamp(32px,6vw,56px) 24px clamp(48px,8vw,80px)',
+      }}>
+        <div style={{ width: '100%', maxWidth: 560 }}>
+
           {/* Block badge */}
           <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: `${blockColor}18`, borderRadius: 100,
-            padding: '5px 14px', marginBottom: 18,
+            display: 'inline-flex', alignItems: 'center', gap: 7,
+            background: blockSoft,
+            borderRadius: 100, padding: '6px 14px', marginBottom: 20,
           }}>
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: blockColor }} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: blockColor }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: blockColor, letterSpacing: '0.03em' }}>
               {currentQ.blockTitle}
             </span>
           </div>
 
           {/* Question label */}
           <h2 style={{
-            fontSize: 'clamp(20px, 4vw, 27px)', fontWeight: 800,
-            color: 'var(--text-primary)', marginBottom: 12,
-            lineHeight: 1.3, letterSpacing: '-0.02em',
+            fontFamily: 'var(--font-display)',
+            fontSize: 'clamp(22px,4.5vw,30px)',
+            fontWeight: 900,
+            color: 'var(--text-primary)',
+            marginBottom: 12,
+            lineHeight: 1.3,
+            letterSpacing: '-0.02em',
           }}>
             {currentQ.label}
           </h2>
@@ -139,15 +157,17 @@ export default function SurveyForm({ questions, answers, onChange, onComplete }:
           {/* Explanation */}
           {currentQ.explanation && (
             <div style={{
-              background: 'white', border: '1px solid var(--border)',
-              borderRadius: 12, padding: '13px 16px', marginBottom: 24,
+              background: 'white',
+              border: '1px solid var(--border)',
+              borderRadius: 12, padding: '13px 16px', marginBottom: 28,
               borderRight: `3px solid ${blockColor}`,
             }}>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
                 {currentQ.explanation}
               </p>
             </div>
           )}
+          {!currentQ.explanation && <div style={{ marginBottom: 28 }} />}
 
           {/* Options */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -163,30 +183,33 @@ export default function SurveyForm({ questions, answers, onChange, onComplete }:
                     onClick={() => handleOptionClick(option)}
                     className={`survey-option${isSelected ? ' selected' : ''}`}
                     style={{
-                      width: '100%', padding: '15px 18px',
-                      border: `2px solid ${isSelected ? 'var(--indigo)' : 'var(--border)'}`,
-                      borderRadius: 12, textAlign: 'right',
-                      background: isSelected ? 'var(--indigo)' : 'white',
+                      width: '100%', padding: '16px 20px',
+                      border: `2px solid ${isSelected ? blockColor : 'var(--border)'}`,
+                      borderRadius: 14, textAlign: 'right',
+                      background: isSelected ? blockColor : 'white',
                       color: isSelected ? 'white' : 'var(--text-primary)',
                       fontFamily: 'inherit', fontSize: 15, fontWeight: 500,
                       cursor: 'pointer',
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      boxShadow: isSelected ? `0 4px 16px ${blockSoft}` : 'none',
+                      transition: 'all 0.15s ease',
                     }}
                   >
                     <span>{option}</span>
                     {(currentQ.type === 'select-multi' || currentQ.type === 'radio') && (
                       <div style={{
-                        width: 20, height: 20,
+                        width: 22, height: 22,
                         borderRadius: currentQ.type === 'radio' ? '50%' : 6,
-                        border: `2px solid ${isSelected ? 'rgba(255,255,255,0.5)' : 'var(--border)'}`,
-                        background: isSelected ? 'rgba(255,255,255,0.25)' : 'transparent',
+                        border: `2px solid ${isSelected ? 'rgba(255,255,255,0.45)' : 'var(--border)'}`,
+                        background: isSelected ? 'rgba(255,255,255,0.22)' : 'transparent',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                        transition: 'all 0.15s',
                       }}>
                         {isSelected && (
                           <div style={{
-                            width: currentQ.type === 'radio' ? 8 : 10,
-                            height: currentQ.type === 'radio' ? 8 : 10,
-                            borderRadius: currentQ.type === 'radio' ? '50%' : 2,
+                            width: currentQ.type === 'radio' ? 9 : 11,
+                            height: currentQ.type === 'radio' ? 9 : 11,
+                            borderRadius: currentQ.type === 'radio' ? '50%' : 3,
                             background: 'white',
                           }} />
                         )}
@@ -197,22 +220,23 @@ export default function SurveyForm({ questions, answers, onChange, onComplete }:
               })}
 
             {currentQ.type === 'text' && (
-              <input
-                type="text"
+              <textarea
                 value={answers[currentQ.key] || ''}
                 onChange={e => onChange(currentQ.key, e.target.value)}
                 placeholder="הקלד כאן..."
+                rows={4}
                 autoFocus
                 style={{
                   width: '100%', padding: '18px 20px',
-                  border: '1.5px solid var(--border)', borderRadius: 12,
-                  fontFamily: 'inherit', fontSize: 16, background: 'white',
-                  color: 'var(--text-primary)', outline: 'none',
-                  transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+                  border: '1.5px solid var(--border)', borderRadius: 14,
+                  fontFamily: 'inherit', fontSize: 15,
+                  background: 'white', color: 'var(--text-primary)',
+                  outline: 'none', resize: 'vertical', lineHeight: 1.7,
+                  transition: 'border-color 0.15s, box-shadow 0.15s',
                 }}
                 onFocus={e => {
-                  e.target.style.borderColor = 'var(--border-focus)'
-                  e.target.style.boxShadow = '0 0 0 3px rgba(79,91,213,0.12)'
+                  e.target.style.borderColor = blockColor
+                  e.target.style.boxShadow = `0 0 0 3px ${blockSoft}`
                 }}
                 onBlur={e => {
                   e.target.style.borderColor = 'var(--border)'
@@ -222,26 +246,33 @@ export default function SurveyForm({ questions, answers, onChange, onComplete }:
             )}
           </div>
 
-          {/* Action buttons — shown on all question types */}
+          {/* ── Action buttons (all question types) ── */}
           <div style={{ marginTop: 30 }}>
             {/* Continue / Finish */}
             <button
               onClick={advance}
               disabled={!isAnswered()}
               style={{
-                width: '100%', padding: '16px',
-                background: 'var(--indigo)', color: 'white',
+                width: '100%', padding: '17px',
+                background: isLast ? 'var(--accent)' : blockColor,
+                color: isLast ? 'var(--navy)' : 'white',
                 border: 'none', borderRadius: 14, fontFamily: 'inherit',
-                fontWeight: 700, fontSize: 16, cursor: isAnswered() ? 'pointer' : 'not-allowed',
-                boxShadow: 'var(--shadow-btn)',
-                opacity: isAnswered() ? 1 : 0.45,
+                fontWeight: 800, fontSize: 16,
+                cursor: isAnswered() ? 'pointer' : 'not-allowed',
+                boxShadow: isLast ? 'var(--shadow-btn-accent)' : 'var(--shadow-btn)',
+                opacity: isAnswered() ? 1 : 0.4,
                 transition: 'all 0.18s ease',
+                letterSpacing: '-0.01em',
               }}
+              onMouseEnter={e => {
+                if (isAnswered()) e.currentTarget.style.transform = 'translateY(-1px)'
+              }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)' }}
             >
-              {currentIndex === questions.length - 1 ? 'סיים וצור לי תוכן ⚡' : 'המשך →'}
+              {isLast ? 'סיים וצור לי תוכן ⚡' : 'המשך →'}
             </button>
 
-            {/* Repeat + Exit row */}
+            {/* Back + Exit row */}
             <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
               {currentIndex > 0 && (
                 <button
@@ -251,7 +282,10 @@ export default function SurveyForm({ questions, answers, onChange, onComplete }:
                     background: '#f0f1f5', border: 'none',
                     color: 'var(--text-secondary)', fontFamily: 'inherit',
                     fontWeight: 600, fontSize: 14, borderRadius: 12, cursor: 'pointer',
+                    transition: 'background 0.15s',
                   }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#e8e6e2')}
+                  onMouseLeave={e => (e.currentTarget.style.background = '#f0f1f5')}
                 >
                   ← חזור
                 </button>
@@ -263,7 +297,16 @@ export default function SurveyForm({ questions, answers, onChange, onComplete }:
                   background: 'transparent', border: '1px solid var(--border)',
                   color: 'var(--text-muted)', fontFamily: 'inherit',
                   fontWeight: 600, fontSize: 14, borderRadius: 12, cursor: 'pointer',
-                  maxWidth: '50%',
+                  maxWidth: currentIndex > 0 ? '50%' : '100%',
+                  transition: 'border-color 0.15s, color 0.15s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'var(--text-muted)'
+                  e.currentTarget.style.color = 'var(--text-secondary)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'var(--border)'
+                  e.currentTarget.style.color = 'var(--text-muted)'
                 }}
               >
                 יציאה
