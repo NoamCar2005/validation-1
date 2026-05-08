@@ -14,6 +14,7 @@ export default function SurveyPage() {
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [checking, setChecking] = useState(true)
 
   useEffect(() => {
     const userId = localStorage.getItem('user_id')
@@ -24,9 +25,14 @@ export default function SurveyPage() {
       .select('survey_completed')
       .eq('id', userId)
       .single()
-      .then(({ data }) => {
-        if (data?.survey_completed) router.replace('/loading')
-      })
+      .then(({ data, error }) => {
+        if (error) console.warn('survey check failed', error)
+        if (data?.survey_completed) {
+          router.replace('/loading')
+        } else {
+          setChecking(false)
+        }
+      }, () => setChecking(false))
   }, [router, supabase])
 
   async function handleComplete() {
@@ -57,6 +63,8 @@ export default function SurveyPage() {
       setSubmitting(false)
     }
   }
+
+  if (checking) return null
 
   return (
     <>
