@@ -13,6 +13,8 @@ export default function LoadingPage() {
   const called = useRef(false)
   const startTime = useRef(0)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const redirectRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const finishRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [progress, setProgress] = useState(0)
   const [finishing, setFinishing] = useState(false)
 
@@ -23,10 +25,12 @@ export default function LoadingPage() {
     called.current = true
     startTime.current = Date.now()
 
+    let mounted = true
     let pVal = 0
 
     // 150ms delay so browser paints width:0% before bar starts moving
     const startDelay = setTimeout(() => {
+      if (!mounted) return
       intervalRef.current = setInterval(() => {
         pVal += (92 - pVal) * 0.03
         setProgress(Math.min(92, pVal))
@@ -66,19 +70,22 @@ export default function LoadingPage() {
       const elapsed = Date.now() - startTime.current
       const remaining = Math.max(0, 4000 - elapsed)
 
-      setTimeout(() => {
+      finishRef.current = setTimeout(() => {
         if (intervalRef.current) clearInterval(intervalRef.current)
         setFinishing(true)
         setProgress(100)
-        setTimeout(() => router.push('/results'), 1500)
+        redirectRef.current = setTimeout(() => router.push('/results'), 1500)
       }, remaining)
     }
 
     generate()
 
     return () => {
+      mounted = false
       clearTimeout(startDelay)
       if (intervalRef.current) clearInterval(intervalRef.current)
+      if (finishRef.current) clearTimeout(finishRef.current)
+      if (redirectRef.current) clearTimeout(redirectRef.current)
     }
   }, [router, supabase])
 
