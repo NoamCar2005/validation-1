@@ -11,20 +11,27 @@ export default function LoadingPage() {
   const router = useRouter()
   const supabase = createClient()
   const called = useRef(false)
+  const startTime = useRef(0)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [progress, setProgress] = useState(0)
+  const [finishing, setFinishing] = useState(false)
 
   useEffect(() => {
     const userId = localStorage.getItem('user_id')
     if (!userId) { router.replace('/'); return }
     if (called.current) return
     called.current = true
+    startTime.current = Date.now()
 
-    // Slow asymptotic progress bar — never promises a time
     let pVal = 0
-    const progInterval = setInterval(() => {
-      pVal += (92 - pVal) * 0.03
-      setProgress(Math.min(92, pVal))
-    }, 400)
+
+    // 150ms delay so browser paints width:0% before bar starts moving
+    const startDelay = setTimeout(() => {
+      intervalRef.current = setInterval(() => {
+        pVal += (92 - pVal) * 0.03
+        setProgress(Math.min(92, pVal))
+      }, 400)
+    }, 150)
 
     async function generate() {
       try {
@@ -43,38 +50,51 @@ export default function LoadingPage() {
         })
 
         const data = await res.json()
-        clearInterval(progInterval)
-        setProgress(100)
 
         if (!res.ok || data.error) {
-          localStorage.setItem('generation_error', data.error || 'שגיאה לא ידועה')
+          const stage = data.stage ? `[stage:${data.stage}] ` : ''
+          const debug = data.debug ? ` — ${data.debug}` : ''
+          localStorage.setItem('generation_error', `${stage}${data.error || 'שגיאה לא ידועה'}${debug}`)
         } else {
           localStorage.setItem('generated_posts', JSON.stringify(data.posts))
         }
-        setTimeout(() => router.push('/results'), 500)
       } catch {
-        clearInterval(progInterval)
         localStorage.setItem('generation_error', 'שגיאה ביצירת התוכן. אנא נסה שוב.')
-        setTimeout(() => router.push('/results'), 500)
       }
+
+      // Enforce minimum 4s display so animation is visible
+      const elapsed = Date.now() - startTime.current
+      const remaining = Math.max(0, 4000 - elapsed)
+
+      setTimeout(() => {
+        if (intervalRef.current) clearInterval(intervalRef.current)
+        setFinishing(true)
+        setProgress(100)
+        setTimeout(() => router.push('/results'), 1500)
+      }, remaining)
     }
 
     generate()
-    return () => clearInterval(progInterval)
+
+    return () => {
+      clearTimeout(startDelay)
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
   }, [router, supabase])
 
   return (
     <div
-      className="screen-enter"
+      className="screen-enter noise-overlay"
       style={{
         minHeight: '100vh',
-        background: 'linear-gradient(155deg, var(--navy) 0%, #14162b 100%)',
+        background: 'linear-gradient(160deg, var(--navy) 0%, #12152e 55%, #0a0c1e 100%)',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         padding: '40px 24px', textAlign: 'center', position: 'relative',
+        overflow: 'hidden',
       }}
     >
-      {/* Logout */}
+      {/* Exit button */}
       <div style={{ position: 'absolute', top: 16, left: 20 }}>
         <button
           onClick={async () => {
@@ -83,85 +103,127 @@ export default function LoadingPage() {
           }}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 5,
-            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-            color: 'rgba(255,255,255,0.45)', fontFamily: 'inherit', fontWeight: 600,
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+            color: 'rgba(255,255,255,0.4)', fontFamily: 'inherit', fontWeight: 600,
             fontSize: 12, padding: '6px 12px', borderRadius: 100, cursor: 'pointer',
+            transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
+            e.currentTarget.style.color = 'rgba(255,255,255,0.65)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
+            e.currentTarget.style.color = 'rgba(255,255,255,0.4)'
           }}
         >
           יציאה
         </button>
       </div>
 
-      {/* Background glow */}
+      {/* Ambient background glows */}
       <div style={{
-        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-        width: 500, height: 500, borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(79,91,213,0.15) 0%, transparent 65%)',
+        position: 'fixed', top: '35%', left: '50%', transform: 'translate(-50%,-50%)',
+        width: 600, height: 600, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(79,91,213,0.13) 0%, transparent 65%)',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'fixed', top: '65%', left: '40%',
+        width: 300, height: 300, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(245,166,35,0.07) 0%, transparent 65%)',
         pointerEvents: 'none',
       }} />
 
-      {/* Spinner with pulse rings */}
-      <div style={{ position: 'relative', marginBottom: 48 }}>
-        <div
-          className="pulse-ring"
-          style={{
-            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-            width: 90, height: 90, borderRadius: '50%',
-            background: 'rgba(245,166,35,0.08)',
-          }}
-        />
-        <div
-          className="pulse-ring-delayed"
-          style={{
-            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-            width: 90, height: 90, borderRadius: '50%',
-            background: 'rgba(245,166,35,0.04)',
-          }}
-        />
-        <div
-          className="spinner-ring"
-          style={{
-            width: 72, height: 72, borderRadius: '50%',
-            border: '3px solid rgba(245,166,35,0.15)',
-            borderTopColor: 'var(--accent)',
-          }}
-        />
-        <div
-          className="glow-pulse"
-          style={{
-            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-            width: 12, height: 12, borderRadius: '50%',
-            background: 'var(--accent)',
-          }}
-        />
+      {/* ── Spinner ───────────────────────────── */}
+      <div style={{ position: 'relative', width: 100, height: 100, marginBottom: 52 }}>
+        {/* Outer pulse rings */}
+        <div className="pulse-ring" style={{
+          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+          width: 100, height: 100, borderRadius: '50%',
+          background: 'rgba(245,166,35,0.07)',
+        }} />
+        <div className="pulse-ring-delayed" style={{
+          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+          width: 100, height: 100, borderRadius: '50%',
+          background: 'rgba(245,166,35,0.04)',
+        }} />
+
+        {/* Outer spinner ring */}
+        <div className="spinner-ring" style={{
+          position: 'absolute', top: '50%', left: '50%',
+          marginTop: -40, marginLeft: -40,
+          width: 80, height: 80, borderRadius: '50%',
+          border: '2.5px solid rgba(255,255,255,0.07)',
+          borderTopColor: 'var(--accent)',
+          borderRightColor: 'rgba(245,166,35,0.4)',
+        }} />
+
+        {/* Inner counter-spinning ring */}
+        <div className="spinner-ring2" style={{
+          position: 'absolute', top: '50%', left: '50%',
+          marginTop: -26, marginLeft: -26,
+          width: 52, height: 52, borderRadius: '50%',
+          border: '2px solid rgba(255,255,255,0.05)',
+          borderTopColor: 'var(--indigo)',
+          borderLeftColor: 'rgba(79,91,213,0.4)',
+        }} />
+
+        {/* Centre glow dot */}
+        <div className="glow-pulse" style={{
+          position: 'absolute', top: '50%', left: '50%',
+          marginTop: -7, marginLeft: -7,
+          width: 14, height: 14, borderRadius: '50%',
+          background: 'var(--accent)',
+          boxShadow: '0 0 12px 4px rgba(245,166,35,0.35)',
+        }} />
       </div>
 
+      {/* Headline */}
       <h2 style={{
-        fontSize: 26, fontWeight: 800, color: 'white',
-        marginBottom: 16, letterSpacing: '-0.02em',
+        fontFamily: 'var(--font-display)',
+        fontSize: 'clamp(22px,4vw,30px)',
+        fontWeight: 900, color: 'white',
+        marginBottom: 18, letterSpacing: '-0.02em',
       }}>
         מייצרים את התוכן שלך...
       </h2>
 
-      <div style={{ marginBottom: 44 }}>
+      {/* Rotating messages */}
+      <div style={{ marginBottom: 48, minHeight: 32 }}>
         <LoadingMessages />
       </div>
 
       {/* Progress bar */}
-      <div style={{ width: '100%', maxWidth: 360, marginBottom: 24 }}>
-        <div style={{ height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden' }}>
+      <div style={{ width: '100%', maxWidth: 380, marginBottom: 12 }}>
+        <div style={{
+          height: 6, background: 'rgba(255,255,255,0.07)',
+          borderRadius: 100, overflow: 'hidden',
+        }}>
           <div
-            className="progress-bar-animate"
             style={{
-              height: '100%', borderRadius: 4,
+              height: '100%', borderRadius: 100,
               background: 'linear-gradient(90deg, var(--indigo), var(--accent))',
               width: `${progress}%`,
+              transition: finishing ? 'width 1.2s ease' : 'width 0.5s ease',
+              boxShadow: progress > 5 ? '0 0 8px rgba(245,166,35,0.4)' : 'none',
             }}
           />
         </div>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between',
+          marginTop: 8,
+        }}>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', fontWeight: 600 }}>
+            {Math.round(progress)}%
+          </span>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', fontWeight: 600 }}>
+            100%
+          </span>
+        </div>
       </div>
 
-      <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: 13 }}>
+      <p style={{ color: 'rgba(255,255,255,0.24)', fontSize: 13 }}>
         אנחנו בוחנים את האתר שלך לעומק — שווה לחכות ✨
       </p>
     </div>
