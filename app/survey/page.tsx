@@ -16,8 +16,18 @@ export default function SurveyPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!localStorage.getItem('user_id')) router.replace('/')
-  }, [router])
+    const userId = localStorage.getItem('user_id')
+    if (!userId) { router.replace('/'); return }
+
+    supabase
+      .from('users')
+      .select('survey_completed')
+      .eq('id', userId)
+      .single()
+      .then(({ data }) => {
+        if (data?.survey_completed) router.replace('/loading')
+      })
+  }, [router, supabase])
 
   async function handleComplete() {
     const requiredAnswered = SURVEY_QUESTIONS
