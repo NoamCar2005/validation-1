@@ -100,7 +100,7 @@ export default function SurveyForm({ questions, answers, onChange, onComplete }:
         </span>
 
         <button
-          onClick={() => router.push('/auth')}
+          onClick={() => router.push('/')}
           style={{
             background: 'transparent', border: '1px solid var(--border)',
             color: 'var(--text-muted)', fontFamily: 'inherit',
@@ -232,7 +232,7 @@ export default function SurveyForm({ questions, answers, onChange, onComplete }:
                 width: '100%', padding: '16px',
                 background: 'var(--indigo)', color: 'white',
                 border: 'none', borderRadius: 14, fontFamily: 'inherit',
-                fontWeight: 700, fontSize: 16, cursor: 'pointer',
+                fontWeight: 700, fontSize: 16, cursor: isAnswered() ? 'pointer' : 'not-allowed',
                 boxShadow: 'var(--shadow-btn)',
                 opacity: isAnswered() ? 1 : 0.45,
                 transition: 'all 0.18s ease',
@@ -263,6 +263,7 @@ export default function SurveyForm({ questions, answers, onChange, onComplete }:
                   background: 'transparent', border: '1px solid var(--border)',
                   color: 'var(--text-muted)', fontFamily: 'inherit',
                   fontWeight: 600, fontSize: 14, borderRadius: 12, cursor: 'pointer',
+                  maxWidth: '50%',
                 }}
               >
                 יציאה
