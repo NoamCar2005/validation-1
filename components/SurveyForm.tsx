@@ -22,7 +22,7 @@ export default function SurveyForm({ questions, answers, onChange, onComplete }:
   const router = useRouter()
   const [currentIndex, setCurrentIndex] = useState(0)
   const currentQ = questions[currentIndex]
-  const progress = ((currentIndex + 1) / questions.length) * 100
+  const progress = (currentIndex / questions.length) * 100
   const blockColor = BLOCK_COLORS[currentQ.block] || '#4F5BD5'
 
   function isAnswered(): boolean {
@@ -42,7 +42,7 @@ export default function SurveyForm({ questions, answers, onChange, onComplete }:
       onChange(currentQ.key, updated)
     } else {
       onChange(currentQ.key, value)
-      setTimeout(() => advance(), 280)
+      // No auto-advance — user presses Continue
     }
   }
 
@@ -54,7 +54,6 @@ export default function SurveyForm({ questions, answers, onChange, onComplete }:
     }
   }
 
-  const isMulti = currentQ.type === 'select-multi' || currentQ.type === 'text'
   const selectedValues = answers[currentQ.key]?.split('|').filter(Boolean) ?? []
 
   return (
@@ -223,25 +222,53 @@ export default function SurveyForm({ questions, answers, onChange, onComplete }:
             )}
           </div>
 
-          {/* Next button for multi/text */}
-          {isMulti && (
-            <div style={{ marginTop: 30 }}>
+          {/* Action buttons — shown on all question types */}
+          <div style={{ marginTop: 30 }}>
+            {/* Continue / Finish */}
+            <button
+              onClick={advance}
+              disabled={!isAnswered()}
+              style={{
+                width: '100%', padding: '16px',
+                background: 'var(--indigo)', color: 'white',
+                border: 'none', borderRadius: 14, fontFamily: 'inherit',
+                fontWeight: 700, fontSize: 16, cursor: 'pointer',
+                boxShadow: 'var(--shadow-btn)',
+                opacity: isAnswered() ? 1 : 0.45,
+                transition: 'all 0.18s ease',
+              }}
+            >
+              {currentIndex === questions.length - 1 ? 'סיים וצור לי תוכן ⚡' : 'המשך →'}
+            </button>
+
+            {/* Repeat + Exit row */}
+            <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+              {currentIndex > 0 && (
+                <button
+                  onClick={() => setCurrentIndex(i => i - 1)}
+                  style={{
+                    flex: 1, padding: '11px',
+                    background: '#f0f1f5', border: 'none',
+                    color: 'var(--text-secondary)', fontFamily: 'inherit',
+                    fontWeight: 600, fontSize: 14, borderRadius: 12, cursor: 'pointer',
+                  }}
+                >
+                  ← חזור
+                </button>
+              )}
               <button
-                onClick={advance}
-                disabled={!isAnswered()}
+                onClick={() => router.push('/')}
                 style={{
-                  width: '100%', padding: '16px', background: 'var(--indigo)', color: 'white',
-                  border: 'none', borderRadius: 14, fontFamily: 'inherit',
-                  fontWeight: 700, fontSize: 16, cursor: 'pointer',
-                  boxShadow: 'var(--shadow-btn)',
-                  opacity: isAnswered() ? 1 : 0.45,
-                  transition: 'all 0.18s ease',
+                  flex: 1, padding: '11px',
+                  background: 'transparent', border: '1px solid var(--border)',
+                  color: 'var(--text-muted)', fontFamily: 'inherit',
+                  fontWeight: 600, fontSize: 14, borderRadius: 12, cursor: 'pointer',
                 }}
               >
-                {currentIndex === questions.length - 1 ? 'צור לי תוכן ⚡' : 'הבא →'}
+                יציאה
               </button>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
