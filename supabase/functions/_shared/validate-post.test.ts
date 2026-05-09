@@ -53,6 +53,17 @@ Deno.test('validatePost: cta post passes with 2 paragraphs', () => {
   assertEquals(result.valid, true)
 })
 
+Deno.test('validatePost: trust post requires 3 paragraphs', () => {
+  const post: CopywriterOutput = {
+    content: 'פסקה ראשונה עם סיפור אישי ומרגש שבונה קשר עם הקהל ומראה את הצד האנושי של בעל העסק שלי. וההיסטוריה שלי בעולם העסקים ובחיים האישיים שעיצבו אותי לאדם שאני היום וההווה שלי. למדתי הרבה דברים חשובים בדרך.\n\nפסקה שנייה שמרחיבה על הניסיון המקצועי ומוסיפה אמינות לסיפור האישי שסופר בפסקה הראשונה עם דוגמאות קונקרטיות מהעבודה שלי בחיים היומיומיים וההשפעה שעשיתי על הלקוחות שלי בעשרים שנים של עבודה. כל פרויקט השנה את דרך החשיבה שלי.\n\nפסקה שלישית שסוגרת בצורה חמה ואנושית ומזמינה את הקהל להמשיך את הקשר עם הכותב ולהיות חלק מהקהילה שלי שגדלה כל יום בהתלהבות ובתקווה לעתיד טוב ביחד. אני מחכה לפגוש אתכם בהדרך.',
+    copy: 'מי אני ולמה אני עושה את מה שאני עושה',
+    channel_recommended: 'instagram',
+    image_prompt: 'warm portrait of a business owner',
+  }
+  const result = validatePost(post, 'trust')
+  assertEquals(result.valid, true)
+})
+
 Deno.test('validatePost: fails when word count is too low for value post', () => {
   const post: CopywriterOutput = {
     ...goodValuePost,
