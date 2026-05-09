@@ -13,7 +13,7 @@ const HUMANIZE_SYSTEM_PROMPT = `אתה קופירייטר ישראלי מנוס�
 - שמור על הטון המתאים לסוג הפוסט
 - עברית בלבד — ללא תווים לטיניים
 - שמור על אורך דומה למקור
-- פלט ONLY JSON תקין: { "content": "", "copy": "" }`
+- פלט JSON בלבד: { "content": "", "copy": "" }`
 
 const HUMANIZE_SCHEMA = {
   type: 'object',
