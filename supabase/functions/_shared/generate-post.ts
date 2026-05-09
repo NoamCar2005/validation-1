@@ -3,19 +3,17 @@
 import type { BusinessProfile, PostPlan, PostType, Channel } from './types.ts'
 import { callGeminiWithRetry, parseJsonOutput } from './summarize.ts'
 
-const TEXT_MODEL = 'gemini-3.0-flash'
-const GEMINI_TEXT_URL = (key: string) =>
-  `https://generativelanguage.googleapis.com/v1beta/models/${TEXT_MODEL}:generateContent?key=${key}`
-
 export const VALUE_POST_SYSTEM_PROMPT = `You are an expert Hebrew social media copywriter for Israeli business owners.
 
 This is a VALUE post — it teaches something useful from the owner's expertise. It should feel like genuine advice from the owner, not an ad.
 
 Rules:
+- CRITICAL: 'content' AND 'copy' fields must contain ONLY Hebrew text — not a single Latin character is allowed. Any English word = task failure.
 - Write entirely in Hebrew
 - Match the tone and voice from the business profile
 - Use the hook from the post plan as the opening line
 - The post should be 100-200 words
+- Structure 'content' as 3-4 short paragraphs separated by \\n\\n (blank lines between paragraphs). Never write one solid block of text.
 - End with a natural, non-pushy close
 - Decide the best channel: instagram (casual, visual, shorter), linkedin (professional, story-driven), facebook (warm, community-feel)
 - Also write an English image generation prompt for the visual
@@ -40,10 +38,12 @@ export const TRUST_POST_SYSTEM_PROMPT = `You are an expert Hebrew social media c
 This is a TRUST post — it builds credibility and connection. It explains who the owner is, their story, their experience, and why people trust them. It should feel personal and genuine, not boastful.
 
 Rules:
+- CRITICAL: 'content' AND 'copy' fields must contain ONLY Hebrew text — not a single Latin character is allowed. Any English word = task failure.
 - Write entirely in Hebrew
 - Match the tone and voice from the business profile
 - Use the hook from the post plan as the opening line
 - The post should be 100-200 words
+- Structure 'content' as 3-4 short paragraphs separated by \\n\\n (blank lines between paragraphs). Never write one solid block of text.
 - Include a personal story element or specific achievement
 - End with a warm, human close
 - Decide the best channel: instagram (personal, story-driven), linkedin (professional credibility), facebook (community, warmth)
@@ -63,11 +63,13 @@ export const CTA_POST_SYSTEM_PROMPT = `You are an expert Hebrew social media cop
 This is a CTA post — a soft call to action. It invites the reader to take a next step without being pushy or salesy. It should feel helpful and natural, like a friend recommending something good.
 
 Rules:
+- CRITICAL: 'content' AND 'copy' fields must contain ONLY Hebrew text — not a single Latin character is allowed. Any English word = task failure.
 - Write entirely in Hebrew
 - Match the tone and voice from the business profile
 - Use the hook from the post plan as the opening line
 - The post should be 80-150 words (shorter and punchier)
-- The CTA should offer clear value: "join", "schedule a call", "download", "DM me" etc.
+- Structure 'content' as 2-3 short paragraphs separated by \\n\\n (blank lines between paragraphs). Never write one solid block of text.
+- The CTA should offer clear value: "הצטרף", "קבע שיחה", "שלח לי הודעה" etc. (always in Hebrew)
 - Never use aggressive sales language
 - Decide the best channel: instagram (short, visual CTA), linkedin (professional invitation), facebook (warm community CTA)
 - Also write an English image generation prompt for the visual
@@ -81,10 +83,21 @@ Output this exact JSON structure:
   "image_prompt": ""
 }`
 
-const SYSTEM_PROMPTS: Record<PostType, string> = {
+export const SYSTEM_PROMPTS: Record<PostType, string> = {
   value: VALUE_POST_SYSTEM_PROMPT,
   trust: TRUST_POST_SYSTEM_PROMPT,
   cta: CTA_POST_SYSTEM_PROMPT,
+}
+
+export const POST_SCHEMA = {
+  type: 'object',
+  properties: {
+    content: { type: 'string' },
+    copy: { type: 'string' },
+    channel_recommended: { type: 'string', enum: ['instagram', 'linkedin', 'facebook'] },
+    image_prompt: { type: 'string' },
+  },
+  required: ['content', 'copy', 'channel_recommended', 'image_prompt'],
 }
 
 export interface CopywriterOutput {
@@ -106,9 +119,14 @@ export async function generatePostCopy(
   const body = {
     system_instruction: { parts: [{ text: systemPrompt }] },
     contents: [{ role: 'user', parts: [{ text: userMessage }] }],
-    generationConfig: { temperature: 0.8, maxOutputTokens: 1024 },
+    generationConfig: {
+      temperature: 0.8,
+      maxOutputTokens: 4096,
+      responseMimeType: 'application/json',
+      responseSchema: POST_SCHEMA,
+    },
   }
 
-  const res = await callGeminiWithRetry(GEMINI_TEXT_URL(geminiApiKey), body)
-  return parseJsonOutput<CopywriterOutput>(res)
+  const { text, finishReason } = await callGeminiWithRetry(geminiApiKey, body, `post:${postType}`)
+  return parseJsonOutput<CopywriterOutput>(text, `post:${postType}`, finishReason)
 }
