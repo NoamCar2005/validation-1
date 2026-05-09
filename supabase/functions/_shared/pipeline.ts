@@ -25,8 +25,8 @@ export async function runPipeline(
   const diag = new Diagnostics(supabaseUrl, supabaseServiceKey, userId)
   diag.log('pipeline', 'info', 'start', { websiteUrl, surveyAnswersCount: surveyAnswers.length, hasGeminiKey: !!geminiApiKey })
 
-  // One-time diagnostic: list available models so we know exactly what this API key can use.
-  await listAvailableModels(geminiApiKey, diag)
+  // One-time diagnostic: fire-and-forget so it doesn't block the pipeline.
+  void listAvailableModels(geminiApiKey, diag)
 
   try {
     // Stage 1: Scrape
