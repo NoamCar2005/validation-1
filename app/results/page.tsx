@@ -31,7 +31,7 @@ const CHANNEL_LABEL: Record<Channel, string> = {
 }
 
 function formatPostContent(text: string): string {
-  if (!text) return text
+  if (!text) return ''
   if (text.includes('\n')) return text
   return text.replace(/([.!?])\s+(?=[֐-׿])/g, '$1\n\n').trim()
 }
@@ -71,9 +71,13 @@ export default function ResultsPage() {
 
   async function handleCopy() {
     if (!activePost) return
-    await navigator.clipboard.writeText(`${activePost.content}\n\n${activePost.copy}`)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2200)
+    try {
+      await navigator.clipboard.writeText(`${activePost.content}\n\n${activePost.copy}`)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2200)
+    } catch {
+      // clipboard unavailable — silently ignore
+    }
   }
 
   if (error) {
