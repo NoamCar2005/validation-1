@@ -4,16 +4,36 @@ export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import TopBar from '@/components/TopBar'
-import PostCard from '@/components/PostCard'
+import Image from 'next/image'
 import EarlyAccessModal from '@/components/EarlyAccessModal'
 
+type PostType = 'value' | 'trust' | 'cta'
+type Channel = 'instagram' | 'linkedin' | 'facebook'
+
 interface Post {
-  post_type: 'value' | 'trust' | 'cta'
+  post_type: PostType
   content: string
   copy: string
-  image_url?: string
-  channel_recommended: 'instagram' | 'linkedin' | 'facebook'
+  image_url?: string | null
+  channel_recommended: Channel
+}
+
+const TAB_META: Record<PostType, { label: string; icon: string }> = {
+  value: { label: 'ערכי', icon: '💡' },
+  trust: { label: 'אמון', icon: '🤝' },
+  cta:   { label: 'CTA',  icon: '🎯' },
+}
+
+const CHANNEL_LABEL: Record<Channel, string> = {
+  instagram: 'אינסטגרם',
+  linkedin:  'לינקדאין',
+  facebook:  'פייסבוק',
+}
+
+function formatPostContent(text: string): string {
+  if (!text) return text
+  if (text.includes('\n')) return text
+  return text.replace(/([.!?])\s+(?=[֐-׿])/g, '$1\n\n').trim()
 }
 
 export default function ResultsPage() {
@@ -22,6 +42,8 @@ export default function ResultsPage() {
   const [error, setError] = useState('')
   const [revealed, setRevealed] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [selectedTab, setSelectedTab] = useState<PostType>('value')
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     const err = localStorage.getItem('generation_error')
@@ -42,18 +64,42 @@ export default function ResultsPage() {
     }
   }, [router])
 
+  useEffect(() => { setCopied(false) }, [selectedTab])
+
+  const sharedImageUrl = posts.find(p => p.post_type === 'value')?.image_url ?? null
+  const activePost = posts.find(p => p.post_type === selectedTab)
+
+  async function handleCopy() {
+    if (!activePost) return
+    await navigator.clipboard.writeText(`${activePost.content}\n\n${activePost.copy}`)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2200)
+  }
+
   if (error) {
     return (
       <div style={{
         minHeight: '100vh', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         padding: '40px 24px', textAlign: 'center',
+        background: 'var(--body-bg)',
       }}>
-        <p style={{ fontSize: 48, marginBottom: 16 }}>😕</p>
-        <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 12 }}>
+        <div style={{
+          width: 72, height: 72, borderRadius: '50%',
+          background: 'rgba(220,38,38,0.08)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 32, marginBottom: 20,
+        }}>😕</div>
+        <h2 style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: 24, fontWeight: 900,
+          color: 'var(--text-primary)', marginBottom: 12,
+        }}>
           אופס, משהו השתבש
         </h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 15, marginBottom: 28 }}>{error}</p>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 15, marginBottom: 28, maxWidth: 400 }}>
+          {error}
+        </p>
         <button
           onClick={() => router.push('/loading')}
           style={{
@@ -72,122 +118,314 @@ export default function ResultsPage() {
   if (!posts.length) return null
 
   return (
-    <div className="screen-enter" style={{ minHeight: '100vh', background: 'var(--body-bg)' }}>
-      <TopBar dark onBack={() => router.push('/survey')} backLabel="חזור לסקר" />
+    <div className="screen-enter" style={{
+      minHeight: '100vh',
+      background: 'var(--body-bg)',
+      paddingBottom: 100,
+    }}>
 
-      {/* Hero */}
+      {/* ── Header ──────────────────────────────── */}
       <div style={{
-        background: 'linear-gradient(135deg, var(--navy) 0%, #1a1c35 100%)',
-        padding: 'clamp(40px, 7vw, 70px) 24px clamp(50px, 8vw, 80px)',
+        background: 'linear-gradient(160deg, var(--navy) 0%, #12152e 100%)',
+        padding: 'clamp(36px,6vw,60px) 24px clamp(40px,7vw,68px)',
         textAlign: 'center', position: 'relative', overflow: 'hidden',
       }}>
         <div style={{
-          position: 'absolute', top: -100, left: '50%', transform: 'translateX(-50%)',
-          width: 400, height: 400, borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(245,166,35,0.12) 0%, transparent 65%)',
+          position: 'absolute', top: -60, left: '50%', transform: 'translateX(-50%)',
+          width: 500, height: 500, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(245,166,35,0.1) 0%, transparent 65%)',
           pointerEvents: 'none',
         }} />
+
         <div style={{ position: 'relative' }}>
-          <div style={{ fontSize: 'clamp(36px, 7vw, 52px)', marginBottom: 12 }}>🎯</div>
-          <h1 style={{
-            fontSize: 'clamp(26px, 5vw, 44px)', fontWeight: 900,
-            color: 'white', letterSpacing: '-0.03em', marginBottom: 12, lineHeight: 1.15,
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            background: 'rgba(37,211,102,0.12)', color: '#0E8E48',
+            borderRadius: 100, padding: '6px 14px', fontSize: 12, fontWeight: 700, marginBottom: 20,
           }}>
-            הנה התוכן שלך מוכן לפרסום
+            <span style={{
+              width: 20, height: 20, borderRadius: '50%',
+              background: 'var(--green)', color: 'white',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              animation: 'pop .4s',
+            }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </span>
+            מוכן! {posts.length} פוסטים נוצרו עבורך
+          </div>
+
+          <h1 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 'clamp(28px,5.5vw,48px)',
+            fontWeight: 900, color: 'white',
+            letterSpacing: '-0.03em', marginBottom: 12, lineHeight: 1.15,
+          }}>
+            התוכן החדש שלך<br />
+            <span style={{ color: 'var(--accent)' }}>מוכן לפרסום</span>
           </h1>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 16 }}>
-            3 פוסטים שנוצרו בדיוק בשבילך — כולל תמונות, טקסט, ופסקת נעילה
+          <p style={{ color: 'rgba(255,255,255,0.48)', fontSize: 15, lineHeight: 1.65 }}>
+            בחר פוסט, לחץ &quot;העתק&quot; והדבק ישירות ברשת החברתית שלך.
           </p>
+
+          <div style={{
+            display: 'flex', justifyContent: 'center',
+            gap: 10, marginTop: 24, flexWrap: 'wrap',
+          }}>
+            <button
+              onClick={() => setShowModal(true)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                background: 'var(--accent)', color: 'var(--navy)',
+                fontFamily: 'inherit', fontWeight: 800, fontSize: 15,
+                border: 'none', borderRadius: 12, padding: '12px 24px',
+                cursor: 'pointer', boxShadow: 'var(--shadow-btn-accent)',
+                transition: 'all 0.18s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+              onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              הצטרף לגישה מוקדמת ⚡
+            </button>
+            <button
+              onClick={() => router.push('/')}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: 'rgba(255,255,255,0.65)',
+                fontFamily: 'inherit', fontWeight: 600, fontSize: 14,
+                borderRadius: 12, padding: '12px 20px',
+                cursor: 'pointer', transition: 'all 0.18s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.13)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+            >
+              ← צור פוסטים לאתר אחר
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Post cards */}
-      <div style={{ maxWidth: 1060, margin: '0 auto', padding: 'clamp(32px, 6vw, 56px) 24px 0' }}>
+      {/* ── Main content ──────────────────────────────── */}
+      <div style={{
+        maxWidth: 720, margin: '0 auto',
+        padding: 'clamp(28px,5vw,48px) 20px 0',
+      }}>
         {revealed && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
-            {posts.map((post, i) => (
-              <PostCard key={i} post={post} index={i} />
-            ))}
+          <div className="card-reveal-1">
+
+            {/* Shared image */}
+            <div style={{
+              borderRadius: 20, overflow: 'hidden', marginBottom: 20,
+              border: '1px solid var(--border)',
+              boxShadow: 'var(--shadow-card)',
+              aspectRatio: '16/9',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              position: 'relative',
+            }}>
+              {sharedImageUrl ? (
+                <Image
+                  src={sharedImageUrl}
+                  alt="תמונה לפוסט"
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              ) : (
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 48, opacity: 0.35,
+                }}>
+                  🖼️
+                </div>
+              )}
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16, direction: 'rtl' }}>
+              {(['value', 'trust', 'cta'] as PostType[]).map(tab => {
+                const { label, icon } = TAB_META[tab]
+                const isActive = selectedTab === tab
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setSelectedTab(tab)}
+                    style={{
+                      flex: 1, padding: '10px 12px',
+                      borderRadius: 12, fontFamily: 'inherit',
+                      fontWeight: 700, fontSize: 14,
+                      border: '1.5px solid',
+                      borderColor: isActive ? 'var(--navy)' : 'var(--border)',
+                      background: isActive ? 'var(--navy)' : 'white',
+                      color: isActive ? 'white' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    }}
+                  >
+                    <span>{icon}</span>
+                    <span>{label}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Tab content panel */}
+            {activePost && (
+              <div style={{
+                background: 'white',
+                borderRadius: 20,
+                border: '1px solid var(--border)',
+                boxShadow: 'var(--shadow-card)',
+                overflow: 'hidden',
+              }}>
+                {/* Header row */}
+                <div style={{
+                  padding: '12px 20px',
+                  borderBottom: '1px solid var(--border)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {TAB_META[activePost.post_type].icon} פוסט {TAB_META[activePost.post_type].label}
+                  </span>
+                  <span style={{
+                    fontSize: 12, fontWeight: 600,
+                    color: 'var(--text-secondary)',
+                    background: 'var(--body-bg)',
+                    padding: '3px 10px', borderRadius: 100,
+                    border: '1px solid var(--border)',
+                  }}>
+                    {CHANNEL_LABEL[activePost.channel_recommended]}
+                  </span>
+                </div>
+
+                {/* Post content + tagline */}
+                <div style={{ padding: '20px 20px 0' }}>
+                  <p style={{
+                    fontSize: 15, lineHeight: 1.9,
+                    color: 'var(--text-primary)',
+                    whiteSpace: 'pre-wrap',
+                    margin: 0,
+                  }}>
+                    {formatPostContent(activePost.content)}
+                  </p>
+                  {activePost.copy && (
+                    <p style={{
+                      fontSize: 13, lineHeight: 1.7,
+                      color: 'var(--text-secondary)',
+                      marginTop: 12, paddingTop: 12,
+                      borderTop: '1px solid var(--border)',
+                      fontStyle: 'italic',
+                      marginBottom: 0,
+                    }}>
+                      {activePost.copy}
+                    </p>
+                  )}
+                </div>
+
+                {/* Copy button */}
+                <div style={{ padding: '16px 20px 20px' }}>
+                  <button
+                    onClick={handleCopy}
+                    style={{
+                      width: '100%', padding: '13px',
+                      borderRadius: 12, fontWeight: 700, fontSize: 14,
+                      background: copied ? 'var(--green)' : 'var(--navy)',
+                      color: 'white', border: 'none', cursor: 'pointer',
+                      transition: 'all 0.25s ease',
+                      boxShadow: copied
+                        ? '0 4px 16px rgba(37,211,102,0.3)'
+                        : '0 6px 22px rgba(12,14,29,0.18)',
+                      fontFamily: 'inherit',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                    }}
+                  >
+                    {copied ? (
+                      <>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        הועתק!
+                      </>
+                    ) : (
+                      <>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                        </svg>
+                        העתק פוסט
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
-      </div>
 
-      {/* WhatsApp section */}
-      <div style={{ maxWidth: 1060, margin: '0 auto', padding: '40px 24px 0' }}>
+        {/* Value proposition strip */}
         <div style={{
-          background: 'linear-gradient(135deg, #075E54 0%, #128C7E 100%)',
-          borderRadius: 24, padding: 'clamp(28px, 5vw, 44px)',
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          textAlign: 'center', gap: 18, position: 'relative', overflow: 'hidden',
+          marginTop: 'clamp(40px,6vw,56px)',
+          background: 'white',
+          borderRadius: 20,
+          border: '1px solid var(--border)',
+          padding: 'clamp(24px,4vw,36px)',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: 24,
+          textAlign: 'center',
         }}>
-          <div style={{
-            position: 'absolute', top: -40, right: -40,
-            width: 180, height: 180, borderRadius: '50%',
-            background: 'rgba(255,255,255,0.05)', pointerEvents: 'none',
-          }} />
-          <div style={{ fontSize: 44 }}>📲</div>
-          <div>
-            <h3 style={{
-              fontSize: 'clamp(20px, 3.5vw, 28px)', fontWeight: 900,
-              color: 'white', marginBottom: 10, letterSpacing: '-0.02em',
-            }}>
-              הצטרף לקהילת ContentMine בוואטסאפ
-            </h3>
-            <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: 15, lineHeight: 1.7, maxWidth: 480, margin: '0 auto' }}>
-              טיפים שבועיים לתוכן שיווקי, עדכונים ראשונים על הפלטפורמה, ושיחות עם בעלי עסקים כמוך — כולם יחד.
-            </p>
-          </div>
-          <a
-            href="https://chat.whatsapp.com/YOUR_GROUP_LINK"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 10,
-              background: '#25D366', color: 'white',
-              borderRadius: 14, padding: '14px 28px', textDecoration: 'none',
-              fontFamily: 'inherit', fontWeight: 800, fontSize: 16,
-              boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
-              transition: 'all 0.18s ease',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-1px)')}
-            onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-            </svg>
-            הצטרף לקבוצה עכשיו
-          </a>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>
-            +340 בעלי עסקים כבר שם • ניתן לעזוב בכל עת
-          </p>
+          {[
+            { icon: '🎯', title: 'פוסט ערכי', desc: 'ידע מקצועי שמצב אותך כמומחה' },
+            { icon: '🤝', title: 'פוסט אמון', desc: 'הסיפור שלך — למה לבחור דווקא בך' },
+            { icon: '⚡', title: 'פוסט CTA', desc: 'קריאה לפעולה שמביאה לקוחות' },
+          ].map(item => (
+            <div key={item.title}>
+              <div style={{ fontSize: 28, marginBottom: 8 }}>{item.icon}</div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)', marginBottom: 4 }}>
+                {item.title}
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                {item.desc}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Early access CTA */}
-      <div style={{ textAlign: 'center', padding: 'clamp(40px, 7vw, 60px) 24px clamp(50px, 8vw, 80px)' }}>
-        <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 16 }}>
-          אהבת את התוצאות? זו רק ההתחלה.
-        </p>
-        <button
-          onClick={() => setShowModal(true)}
-          style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            background: 'var(--accent)', color: 'var(--navy)',
-            fontFamily: 'inherit', fontWeight: 800, fontSize: 17,
-            border: 'none', borderRadius: 'var(--radius-md)', padding: '18px 40px',
-            cursor: 'pointer', boxShadow: 'var(--shadow-btn-accent)', transition: 'all 0.18s ease',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.background = 'var(--accent-hover)'
-            e.currentTarget.style.transform = 'translateY(-1px)'
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = 'var(--accent)'
-            e.currentTarget.style.transform = 'translateY(0)'
-          }}
-        >
-          הצטרף לגישה המוקדמת →
-        </button>
+      {/* ── Sticky bottom CTA bar ───────────────── */}
+      <div
+        className="sticky-bar-enter"
+        style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200,
+          padding: '16px 20px',
+          background: 'linear-gradient(180deg, transparent, rgba(251,247,240,0.92) 30%, var(--body-bg))',
+        }}
+      >
+        <div style={{ maxWidth: 520, margin: '0 auto' }}>
+          <button
+            onClick={() => setShowModal(true)}
+            style={{
+              width: '100%', padding: '17px 22px',
+              background: 'var(--navy)', color: 'white',
+              border: 'none', borderRadius: 16, fontFamily: 'inherit',
+              fontWeight: 800, fontSize: 16,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              boxShadow: '0 10px 32px rgba(12,14,29,0.30)',
+              cursor: 'pointer', transition: 'all 0.18s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+          >
+            רוצה כזה כל שבוע? הצטרף לרשימה
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {showModal && <EarlyAccessModal onClose={() => setShowModal(false)} />}
