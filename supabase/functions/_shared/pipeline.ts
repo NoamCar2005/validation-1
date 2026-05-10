@@ -73,16 +73,18 @@ export async function runPipeline(
           copy = validated
         }
 
-        const imageUrl = await generateImage(
-          copy.image_prompt,
-          postType,
-          copy.channel_recommended,
-          userId,
-          geminiApiKey,
-          supabaseUrl,
-          supabaseServiceKey,
-          diag,
-        )
+        const imageUrl = postType === 'value'
+          ? await generateImage(
+              copy.image_prompt,
+              postType,
+              copy.channel_recommended,
+              userId,
+              geminiApiKey,
+              supabaseUrl,
+              supabaseServiceKey,
+              diag,
+            )
+          : null
         const post: GeneratedPost = {
           post_type: postType,
           content: copy.content,
@@ -109,7 +111,7 @@ export async function runPipeline(
     })
     diag.log('generate-posts', 'info', `done ${Date.now() - t3}ms succeeded=${posts.length}/3 with_image=${posts.filter(p => p.image_url).length}`)
 
-    if (posts.length < 2) {
+    if (posts.length < 3) {
       throw new Error(
         `[stage:generate-posts] only ${posts.length}/3 posts succeeded. Failures: ${failures.join(' | ')}`
       )
