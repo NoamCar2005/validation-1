@@ -69,7 +69,7 @@ supabase/functions/
 
 ### Agent 1 — Summarize Agent
 **File:** `supabase/functions/_shared/summarize.ts`
-**Model:** `gemini-2.5-flash`
+**Model:** `gemini-3-flash`
 **Input:** Raw website text (markdown) + survey answers array
 **Output:** `BusinessProfile` JSON — business name, type, niche, target audience, core offer, tone, pain points, survey insights
 **System prompt location:** Inside `summarize.ts`, exported as `SUMMARIZE_SYSTEM_PROMPT` constant at the top of the file
@@ -77,7 +77,7 @@ supabase/functions/
 
 ### Agent 2 — Plan Agent
 **File:** `supabase/functions/_shared/plan.ts`
-**Model:** `gemini-2.5-flash`
+**Model:** `gemini-3-flash`
 **Input:** `BusinessProfile` JSON
 **Output:** `MarketingPlan` JSON — 3 post plans (value, trust, cta), each with angle, key_message, hook (Hebrew), tone, image_direction
 **System prompt location:** Inside `plan.ts`, exported as `PLAN_SYSTEM_PROMPT` constant at the top of the file
@@ -85,7 +85,7 @@ supabase/functions/
 
 ### Agent 3 — Copywriter Agent (×3, runs in parallel)
 **File:** `supabase/functions/_shared/generate-post.ts`
-**Model:** `gemini-2.5-flash`
+**Model:** `gemini-3-flash`
 **Input:** `BusinessProfile` + one `PostPlan` (value | trust | cta) + post_type string
 **Output:** `{ content: string, copy: string, channel_recommended: string, image_prompt: string }`
 **System prompt location:** Inside `generate-post.ts` — three separate prompt constants at the top:

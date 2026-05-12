@@ -22,7 +22,7 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
     block: '1',
     blockTitle: 'קצת עליך',
     blockDescription: 'כדי שהפוסטים יהיו מדויקים לך',
-    explanation: "סוג העסק קובע את הטון, הז'אנר, ומי מקבל את ההחלטות מנגד. פרילנסר מדבר אחרת מ-SaaS — וכך גם התוכן שלו.",
+    explanation: "כל סוג עסק מדבר אחרת לקהל שלו, כך גם התוכן שלו.",
   },
   {
     key: 'q2_ideal_customer',
@@ -31,7 +31,7 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
     required: true,
     block: '1',
     blockTitle: 'קצת עליך',
-    explanation: 'ככל שתתאר את הלקוח בצורה ממוקדת יותר — גיל, תפקיד, כאב — כך התוכן יפגע בדיוק. "בעלי עסקים" זה רחב מדי. "מאמנים עסקיים בתחילת דרכם שרוצים לקוחות ראשונים" זה כבר משהו.',
+    explanation: 'ככך שתתאר את הלקוח בצורה ממוקדת יותר, כך התוכן יהיה ממוקד יותר ויפגע בידיוק.',
   },
   {
     key: 'q3_main_message',
@@ -40,7 +40,7 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
     required: true,
     block: '1',
     blockTitle: 'קצת עליך',
-    explanation: 'זה ה-"למה אני?" שלך. מה שגורם ללקוח לבחור בך ולא במתחרים. אם אין לך תשובה ברורה — נמצא אותה יחד דרך הפוסטים.',
+    explanation: 'זה ה-"למה אני?" שלך. מה שגורם ללקוח לבחור בך ולא במתחרים.',
   },
   {
     key: 'q4_active_platforms',
@@ -51,7 +51,7 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
     block: '2',
     blockTitle: 'פרסום ברשתות',
     blockDescription: 'כדי שנבין מאיפה להתחיל',
-    explanation: 'כל פלטפורמה דורשת שפה שונה. פוסט לינקדאין נראה אחרת מפוסט אינסטגרם — באורך, בטון, ובפורמט התמונה. ניצור תוכן שמתאים בדיוק לאן שאתה נמצא.',
+    explanation: 'כל פלטפורמה דורשת שפה שונה. ניצור תוכן שמתאים בדיוק לאן שאתה נמצא.',
   },
   {
     key: 'q5_posting_frequency',
@@ -61,7 +61,7 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
     required: true,
     block: '2',
     blockTitle: 'פרסום ברשתות',
-    explanation: 'לא שואלים כדי לשפוט — שואלים כדי להבין מה "הרבה" בשבילך. מי שמפרסם פעם בשבוע צריך תוכן שונה ממי שמפרסם כל יום.',
+    explanation: 'לא שואלים כדי לשפוט - שואלים כדי להבין מה "הרבה" בשבילך. מי שמפרסם פעם בשבוע צריך תוכן שונה ממי שמפרסם כל יום.',
   },
   {
     key: 'q6_time_spent',
@@ -71,7 +71,7 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
     required: true,
     block: '2',
     blockTitle: 'פרסום ברשתות',
-    explanation: 'זמן הוא המשאב הכי יקר שלך. נדע כמה להקל עליך — ונראה לך בדיוק כמה שעות אנחנו חוסכים לך כל שבוע.',
+    explanation: 'זמן הוא המשאב הכי יקר שלך. נדע כמה להקל עליך - ונראה לך בדיוק כמה שעות אנחנו חוסכים לך כל שבוע.',
   },
   {
     key: 'q7_blocking_factors',
@@ -81,7 +81,7 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
     required: true,
     block: '3',
     blockTitle: 'אתגרי תוכן',
-    explanation: 'רוב בעלי העסקים עוצרים באותו מקום בדיוק. זה לא חוסר מוטיבציה — זה חוסר מערכת. ניצור עבורך את המערכת שתסיר את החסם הזה פעם אחת ולתמיד.',
+    explanation: 'רוב בעלי עסקים נתקעים באותו המקום. זה לא חוסר מוטיבציה, זאת חוסר עקביות. ככה נבין איזה פוסט העסק שלך צריך.',
   },
   {
     key: 'q8_post_effectiveness',
@@ -91,7 +91,7 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
     required: true,
     block: '3',
     blockTitle: 'אתגרי תוכן',
-    explanation: 'מעניין אותנו לא רק האם אתה מפרסם — אלא האם זה עובד. פוסטים שלא מניבים תוצאות הם בזבוז זמן. אנחנו נוודא שכל פוסט עובד בשבילך.',
+    explanation: 'חשוב לנו לדעת לא רק כמה אתה מפרסם, אלא גם אם התוכן עובד. פוסטים שלא מניבים כלום הם בזבוז זמן.',
   },
   {
     key: 'q9_current_spending',
@@ -101,7 +101,7 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
     required: true,
     block: '4',
     blockTitle: 'מה חשוב לך',
-    explanation: 'לא כדי לדעת מה תשלם לנו — כדי להבין מה השוק הנוכחי שלך. אם כבר משקיע בכלי שיווק, כנראה שאתה מבין את הערך. אם לא — נראה לך מדוע זה משתלם.',
+    explanation: 'כדי שנדע איזה סוג של פוסטים ליצור בשבילך כדי להשלים את השיווק שלך.',
   },
   {
     key: 'q10_content_priority',
@@ -111,6 +111,6 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
     required: true,
     block: '4',
     blockTitle: 'מה חשוב לך',
-    explanation: 'יש הבדל עצום בין "אני רוצה לייד" לבין "אני רוצה שאנשים יבינו מה אני עושה". התשובה שלך תקבע את כיוון הפוסטים שנייצר — ישירות למטרה שלך.',
+    explanation: 'יש הבדל עצום בין איך שיוצרים פוסטים למטרות השונות. התשובה שלך תקבע איזה כיוון פוסטים נייצר בשבילך.',
   },
 ]

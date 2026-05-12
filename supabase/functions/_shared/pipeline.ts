@@ -147,7 +147,8 @@ export async function runPipeline(
 async function listAvailableModels(geminiApiKey: string, diag: Diagnostics) {
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${geminiApiKey}&pageSize=200`,
+      `https://generativelanguage.googleapis.com/v1beta/models?pageSize=200`,
+      { headers: { 'x-goog-api-key': geminiApiKey } },
     )
     if (!res.ok) {
       const body = await res.text()

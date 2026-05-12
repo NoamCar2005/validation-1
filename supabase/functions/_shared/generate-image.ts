@@ -12,8 +12,8 @@ export const IMAGE_MODELS = [
   'gemini-2.5-flash-image',
 ]
 
-const GEMINI_URL = (model: string, key: string) =>
-  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`
+const GEMINI_URL = (model: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
 
 const ASPECT_RATIO: Record<Channel, string> = {
   instagram: '1:1',
@@ -95,10 +95,13 @@ export async function generateImage(
       let res: Response
       try {
         res = await fetchWithTimeout(
-          GEMINI_URL(model, geminiApiKey),
+          GEMINI_URL(model),
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': geminiApiKey,
+            },
             body: JSON.stringify(body),
           },
           FETCH_TIMEOUT_MS,
@@ -159,13 +162,16 @@ export async function generateImage(
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const ext = mimeType.split('/')[1]?.split(';')[0] || 'png'
-    const storagePath = `${userId}/${postType}.${ext}`
+    // Random per-image filename — unguessable, so a public bucket URL can't be
+    // enumerated. Keep userId as the folder for future RLS scoping.
+    const objectId = crypto.randomUUID()
+    const storagePath = `${userId}/${postType}-${objectId}.${ext}`
 
     diag.log(stage, 'info', `uploading bucket=Validation path=${storagePath} bytes=${bytes.length} mime=${mimeType} model=${workingModel}`)
 
     const { error: uploadError } = await supabase.storage
       .from('Validation')
-      .upload(storagePath, bytes, { contentType: mimeType, upsert: true })
+      .upload(storagePath, bytes, { contentType: mimeType, upsert: false })
 
     if (uploadError) {
       diag.log(stage, 'error', 'storage upload failed', {

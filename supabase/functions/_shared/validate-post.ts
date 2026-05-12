@@ -1,6 +1,6 @@
 import type { PostType, BusinessProfile, PostPlan } from './types.ts'
 import type { CopywriterOutput } from './generate-post.ts'
-import { generatePostCopy, SYSTEM_PROMPTS, POST_SCHEMA } from './generate-post.ts'
+import { generatePostCopy, buildPostUserMessage, SYSTEM_PROMPTS, POST_SCHEMA } from './generate-post.ts'
 import { callGeminiWithRetry, parseJsonOutput } from './summarize.ts'
 
 export interface ValidationResult {
@@ -11,10 +11,19 @@ export interface ValidationResult {
 export function validatePost(output: CopywriterOutput, postType: PostType): ValidationResult {
   const critique: string[] = []
 
-  // Hebrew only — check for Latin characters in both content and copy
-  // image_prompt is intentionally excluded — it is English-language input to the image generation model
-  if (/[a-zA-Z]/.test(output.content) || /[a-zA-Z]/.test(output.copy)) {
-    critique.push('הפוסט מכיל תווים באנגלית — כתוב בעברית בלבד')
+  // Hebrew only — reject if Latin characters make up more than 5% of alphabetic characters.
+  // This allows brand names and tech acronyms that are legitimately English (e.g. "AI", "SaaS")
+  // while still catching posts that are substantially written in English.
+  // image_prompt is intentionally excluded — it is English-language input to the image generation model.
+  function latinRatio(text: string): number {
+    const hebrew = (text.match(/[א-ת]/g) ?? []).length
+    const latin = (text.match(/[a-zA-Z]/g) ?? []).length
+    if (latin === 0) return 0
+    if (hebrew === 0) return 1
+    return latin / (hebrew + latin)
+  }
+  if (latinRatio(output.content) > 0.05 || latinRatio(output.copy) > 0.05) {
+    critique.push('הפוסט מכיל יותר מדי תווים באנגלית — כתוב בעברית בלבד')
   }
 
   // Counts each emoji code point with Emoji_Presentation — ZWJ compound emoji (e.g. 👨‍💻) count as multiple; acceptable for LLM output
@@ -46,7 +55,7 @@ export async function generateValidatedPostCopy(
   postPlan: PostPlan,
   geminiApiKey: string,
 ): Promise<CopywriterOutput> {
-  const userMessage = `Business profile:\n${JSON.stringify(businessProfile)}\n\nPost plan:\n${JSON.stringify(postPlan)}\n\nWrite the ${postType} post.`
+  const userMessage = buildPostUserMessage(postType, businessProfile, postPlan)
 
   // Attempt 1: fresh generation
   let output = await generatePostCopy(postType, businessProfile, postPlan, geminiApiKey)
@@ -64,7 +73,7 @@ export async function generateValidatedPostCopy(
     ],
     generationConfig: {
       temperature: 0.8,
-      maxOutputTokens: 4096,
+      maxOutputTokens: 8192,
       responseMimeType: 'application/json',
       responseSchema: POST_SCHEMA,
     },

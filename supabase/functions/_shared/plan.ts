@@ -3,11 +3,7 @@
 import type { BusinessProfile, MarketingPlan } from './types.ts'
 import { callGeminiWithRetry, parseJsonOutput } from './summarize.ts'
 
-const TEXT_MODEL = 'gemini-3.0-flash'
-const GEMINI_TEXT_URL = (key: string) =>
-  `https://generativelanguage.googleapis.com/v1beta/models/${TEXT_MODEL}:generateContent?key=${key}`
-
-export const PLAN_SYSTEM_PROMPT = `You are a senior Hebrew marketing strategist. You plan social media content for Israeli business owners.
+export const PLAN_SYSTEM_PROMPT = `You are a senior Hebrew marketing strategist with years of experience. You plan social media content for Israeli business owners.
 
 You will receive a structured business profile. Plan exactly 3 social media posts:
 - Post 1 (value_post): A professional tip or insight from the owner's field. Teaches something useful.
@@ -22,16 +18,32 @@ For EACH post, define:
 - image_direction: A description of the visual that would accompany this post
 
 Rules:
+- CRITICAL: 'hook', 'angle', 'key_message', and 'tone' fields must ALL be written in Hebrew — not a single English word. Any Latin text = task failure.
 - Be specific to this business — no generic advice
-- Write hooks in Hebrew
-- Output ONLY valid JSON — no explanation, no markdown, no code blocks
+- Keep each string concise; do NOT include literal newlines inside string values
+- Output ONLY valid JSON — no explanation, no markdown, no code blocks`
 
-Output this exact JSON structure:
-{
-  "value_post": { "angle": "", "key_message": "", "hook": "", "tone": "", "image_direction": "" },
-  "trust_post": { "angle": "", "key_message": "", "hook": "", "tone": "", "image_direction": "" },
-  "cta_post":   { "angle": "", "key_message": "", "hook": "", "tone": "", "image_direction": "" }
-}`
+const POST_PLAN_SCHEMA = {
+  type: 'object',
+  properties: {
+    angle: { type: 'string' },
+    key_message: { type: 'string' },
+    hook: { type: 'string' },
+    tone: { type: 'string' },
+    image_direction: { type: 'string' },
+  },
+  required: ['angle', 'key_message', 'hook', 'tone', 'image_direction'],
+}
+
+const PLAN_SCHEMA = {
+  type: 'object',
+  properties: {
+    value_post: POST_PLAN_SCHEMA,
+    trust_post: POST_PLAN_SCHEMA,
+    cta_post: POST_PLAN_SCHEMA,
+  },
+  required: ['value_post', 'trust_post', 'cta_post'],
+}
 
 export async function plan(
   businessProfile: BusinessProfile,
@@ -42,9 +54,14 @@ export async function plan(
   const body = {
     system_instruction: { parts: [{ text: PLAN_SYSTEM_PROMPT }] },
     contents: [{ role: 'user', parts: [{ text: userMessage }] }],
-    generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 8192,
+      responseMimeType: 'application/json',
+      responseSchema: PLAN_SCHEMA,
+    },
   }
 
-  const res = await callGeminiWithRetry(GEMINI_TEXT_URL(geminiApiKey), body)
-  return parseJsonOutput<MarketingPlan>(res)
+  const { text, finishReason } = await callGeminiWithRetry(geminiApiKey, body, 'plan')
+  return parseJsonOutput<MarketingPlan>(text, 'plan', finishReason)
 }

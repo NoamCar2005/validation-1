@@ -67,7 +67,7 @@ A `selectedTab` state (default: `'value'`) controls which post's text is shown. 
 **2. Shared image section** — rendered below the header, full-width within a `maxWidth: 720` centered container. Aspect ratio 16/9. If `sharedImageUrl` is null, render a neutral placeholder (subtle gradient or pattern, no error message). No channel-specific cropping.
 
 **3. Tabs row** — three pill buttons inside the same centered container:
-- Labels: `ערכי` (value), `אמון` (trust), `CTA` (cta)
+- Labels: `ערך` (value), `יצירת אמון` (trust), `CTA` (cta)
 - Active tab: filled with `var(--navy)`, white text
 - Inactive: bordered, `var(--text-secondary)`, transparent background
 - RTL layout, gap between pills

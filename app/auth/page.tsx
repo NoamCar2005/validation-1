@@ -173,7 +173,7 @@ export default function AuthPage() {
             style={inputStyle}
             onFocus={e => {
               e.target.style.borderColor = 'var(--border-focus)'
-              e.target.style.boxShadow = '0 0 0 3px rgba(79,91,213,0.12)'
+              e.target.style.boxShadow = '0 0 0 3px rgba(232,98,40,0.12)'
             }}
             onBlur={e => {
               e.target.style.borderColor = 'var(--border)'
@@ -191,7 +191,7 @@ export default function AuthPage() {
             style={inputStyle}
             onFocus={e => {
               e.target.style.borderColor = 'var(--border-focus)'
-              e.target.style.boxShadow = '0 0 0 3px rgba(79,91,213,0.12)'
+              e.target.style.boxShadow = '0 0 0 3px rgba(232,98,40,0.12)'
             }}
             onBlur={e => {
               e.target.style.borderColor = 'var(--border)'
@@ -213,7 +213,7 @@ export default function AuthPage() {
             disabled={loading || googleLoading || !email || !password}
             style={{
               width: '100%', padding: '15px', marginTop: 4,
-              background: 'var(--indigo)', color: 'white',
+              background: 'var(--accent)', color: 'white',
               border: 'none', borderRadius: 14, fontFamily: 'inherit',
               fontWeight: 700, fontSize: 16, cursor: 'pointer',
               boxShadow: 'var(--shadow-btn)', transition: 'all 0.18s ease',

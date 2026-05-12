@@ -42,7 +42,7 @@ export async function humanizePost(
     contents: [{ role: 'user', parts: [{ text: userMessage }] }],
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 4096,
+      maxOutputTokens: 8192,
       responseMimeType: 'application/json',
       responseSchema: HUMANIZE_SCHEMA,
     },
