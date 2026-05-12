@@ -5,33 +5,23 @@ import { callGeminiWithRetry, parseJsonOutput } from './summarize.ts'
 
 export const VALUE_POST_SYSTEM_PROMPT = `You are an expert Hebrew social media copywriter for Israeli business owners.
 
-This is a VALUE post — it teaches something useful from the owner's expertise. It should feel like genuine advice from the owner, not an ad.
+This is a VALUE post — it shares useful expertise, teaches something valuable, and feels like genuine advice from the owner, not an ad.
 
-Rules:
-- CRITICAL: 'content' AND 'copy' fields must contain ONLY Hebrew text — not a single Latin character is allowed. Any English word = task failure.
-- Write entirely in Hebrew
-- Match the tone and voice from the business profile
-- Use the hook from the post plan as the opening line
-- The post should be 100-200 words
-- Structure 'content' as 3-4 short paragraphs separated by \\n\\n (blank lines between paragraphs). Never write one solid block of text.
-- End with a natural, non-pushy close
-- Decide the best channel: instagram (casual, visual, shorter), linkedin (professional, story-driven), facebook (warm, community-feel)
-- Also write an English image generation prompt for the visual
-- Output ONLY valid JSON — no explanation, no markdown, no code blocks
+Instructions:
+- Write entirely in Hebrew (no English words allowed)
+- Structure as 3-4 short paragraphs separated by blank lines
+- Word count: 50-200 words (let the business context guide your length)
+- Tone: Match the inferred voice from the business profile
+- Close naturally without pushy language
+- Output ONLY valid JSON, no explanation or markdown
 
-Output this exact JSON structure:
+Output JSON:
 {
-  "content": "",
-  "copy": "",
-  "channel_recommended": "instagram | linkedin | facebook",
-  "image_prompt": ""
-}
-
-Where:
-- content = full post text in Hebrew, ready to publish
-- copy = a 1-line hook/tagline in Hebrew
-- channel_recommended = best platform for this post
-- image_prompt = detailed English prompt for an AI image model (subject, style, lighting, mood, composition)`
+  "content": "...",
+  "copy": "...",
+  "channel_recommended": "instagram|linkedin|facebook",
+  "image_prompt": "..."
+}`
 
 export const TRUST_POST_SYSTEM_PROMPT = `You are an expert Hebrew social media copywriter for Israeli business owners.
 
@@ -107,6 +97,10 @@ export interface CopywriterOutput {
   image_prompt: string
 }
 
+export function buildPostUserMessage(postType: PostType, businessProfile: BusinessProfile, postPlan: PostPlan): string {
+  return `Business profile:\n${JSON.stringify(businessProfile)}\n\nPost plan:\n${JSON.stringify(postPlan)}\n\nWrite the ${postType} post.`
+}
+
 export async function generatePostCopy(
   postType: PostType,
   businessProfile: BusinessProfile,
@@ -114,14 +108,14 @@ export async function generatePostCopy(
   geminiApiKey: string,
 ): Promise<CopywriterOutput> {
   const systemPrompt = SYSTEM_PROMPTS[postType]
-  const userMessage = `Business profile:\n${JSON.stringify(businessProfile)}\n\nPost plan:\n${JSON.stringify(postPlan)}\n\nWrite the ${postType} post.`
+  const userMessage = buildPostUserMessage(postType, businessProfile, postPlan)
 
   const body = {
     system_instruction: { parts: [{ text: systemPrompt }] },
     contents: [{ role: 'user', parts: [{ text: userMessage }] }],
     generationConfig: {
       temperature: 0.8,
-      maxOutputTokens: 4096,
+      maxOutputTokens: 8192,
       responseMimeType: 'application/json',
       responseSchema: POST_SCHEMA,
     },
