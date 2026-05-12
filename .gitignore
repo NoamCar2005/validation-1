@@ -36,3 +36,9 @@ next-env.d.ts
 # tooling artifacts
 .playwright-mcp/
 .claude/
+
+# internal docs / planning artifacts
+docs/superpowers/plans/
+docs/superpowers/specs/2026-05-08-*
+supabase/.temp/
+.vscode/
