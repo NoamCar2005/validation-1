@@ -2,6 +2,7 @@
 
 import type { BusinessProfile, PostPlan, PostType, Channel } from './types.ts'
 import { callGeminiWithRetry, parseJsonOutput } from './summarize.ts'
+import { evaluateCopywritingQuality, type RubricEvaluationResult } from './copywriting-rubric.ts'
 
 export const VALUE_POST_SYSTEM_PROMPT = `You are an expert Hebrew social media copywriter for Israeli business owners.
 
