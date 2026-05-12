@@ -2,78 +2,81 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { runPipeline } from '../_shared/pipeline.ts'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { authenticate } from '../_shared/auth.ts'
+import { corsHeaders } from '../_shared/cors.ts'
 
 Deno.serve(async (req) => {
+  const cors = corsHeaders(req)
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: cors })
+  }
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'method not allowed' }), {
+      status: 405,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
   }
 
   try {
-    const { user_id } = await req.json()
-    if (!user_id) {
-      return new Response(
-        JSON.stringify({ error: 'user_id נדרש' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY')!
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
-    // Fetch user record
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id, website_url')
-      .eq('id', user_id)
-      .single()
-
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'משתמש לא נמצא' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    // 1) Verify JWT and load the caller's public.users row.
+    const authed = await authenticate(req, supabaseUrl, supabaseAnonKey, supabaseServiceKey)
+    if (!authed) {
+      return new Response(JSON.stringify({ error: 'לא מורשה' }), {
+        status: 401,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
     }
 
-    // Fetch survey answers
+    // Drain (but ignore) the body so older clients that still send user_id don't break.
+    try { await req.json() } catch { /* empty body is fine */ }
+
+    // 2) Fetch survey answers using the AUTHENTICATED user's row id.
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const { data: surveyRows } = await supabase
       .from('survey_responses')
       .select('question_key, answer_text')
-      .eq('user_id', user_id)
+      .eq('user_id', authed.userRowId)
 
     const surveyAnswers = (surveyRows ?? []).map(r => ({
       key: r.question_key,
       value: r.answer_text,
     }))
 
-    // Run pipeline
+    // 3) Run pipeline.
     const { posts } = await runPipeline(
-      user.website_url,
+      authed.websiteUrl,
       surveyAnswers,
-      user_id,
+      authed.userRowId,
       geminiApiKey,
       supabaseUrl,
       supabaseServiceKey,
     )
 
-    return new Response(
-      JSON.stringify({ posts }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify({ posts }), {
+      status: 200,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'שגיאה ביצירת התוכן. אנא נסה שוב.'
-    const isHebrew = /[֐-׿]/.test(message)
-    console.error('generate-content error:', err)
+    const rawMessage = err instanceof Error ? err.message : String(err)
+    console.error('[generate-content] FATAL:', rawMessage, err instanceof Error ? err.stack : '')
+
+    const stageMatch = rawMessage.match(/\[stage:([^\]]+)\]/)
+    const stage = stageMatch ? stageMatch[1] : 'unknown'
+
+    // Never return raw stack/error to the client. Stage tag is a fixed enum,
+    // safe to surface for support routing. Details stay in server logs only.
     return new Response(
-      JSON.stringify({ error: isHebrew ? message : 'שגיאה ביצירת התוכן. אנא נסה שוב.' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({
+        error: 'שגיאה ביצירת התוכן. אנא נסה שוב.',
+        stage,
+      }),
+      { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } }
     )
   }
 })
