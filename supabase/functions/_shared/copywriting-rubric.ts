@@ -71,13 +71,12 @@ export function evaluateCopyField(
   // Rule 3: Active Voice (check for passive constructions, heuristic)
   const passivePatterns = ['נעשה', 'הוא', 'היא', 'הם', 'הן'] // rough heuristic
   const hasPassiveIndicators = passivePatterns.some(pattern => copy.includes(pattern))
-  if (hasPassiveIndicators && wordCount < 8) {
-    // Only flag if very short and has passive language
+  if (hasPassiveIndicators) {
     issues.push({
       field: 'copy',
       rule: COPY_FIELD_RULES.ACTIVE_VOICE_AND_SPECIFICITY,
       severity: 'warning',
-      suggestion: 'Consider using active voice and specific details to strengthen the hook.',
+      suggestion: 'Use active voice and specific details to strengthen the hook. Avoid passive constructions.',
     })
   }
 
@@ -155,10 +154,8 @@ export function evaluateContentField(
     })
   }
 
-  // Rule 4: Logical Flow (basic check: no abrupt ending)
-  const lastSentence = sentences[sentences.length - 1] || ''
-  const endsAbruptly = lastSentence.length < 10 || lastSentence.endsWith('.')
-  // This is a heuristic; full evaluation happens at regeneration time
+  // Rule 4: Logical Flow is validated during regeneration prompt when issues occur
+  // No heuristic check needed here
 
   // Rule 5: Natural Close (check for pushy language)
   const pushyPatterns = ['קנה עכשיו', 'אל תפסיד', 'מהר', 'סוף מוגבל', 'זמן מוגבל']
