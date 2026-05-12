@@ -173,3 +173,44 @@ export function evaluateContentField(
 
   return { isValid, issues }
 }
+
+export async function evaluateCopywritingQuality(
+  postOutput: CopywriterOutput,
+  businessProfile: BusinessProfile,
+  postType: PostType,
+): Promise<RubricEvaluationResult> {
+  const copyEvaluation = evaluateCopyField(postOutput.copy, businessProfile, postType)
+  const contentEvaluation = evaluateContentField(postOutput.content, postOutput.copy, postType)
+
+  const allIssues = [...copyEvaluation.issues, ...contentEvaluation.issues]
+  const fieldsToRegenerate: ('copy' | 'content')[] = []
+
+  // Collect fields that need regeneration
+  if (!copyEvaluation.isValid) {
+    fieldsToRegenerate.push('copy')
+  }
+  if (!contentEvaluation.isValid) {
+    fieldsToRegenerate.push('content')
+  }
+
+  const isValid = copyEvaluation.isValid && contentEvaluation.isValid
+
+  // Build feedback message for agent
+  let feedback = ''
+  if (isValid) {
+    feedback = 'All copywriting standards met. Post is ready.'
+  } else {
+    feedback = 'Copywriting issues detected:\n'
+    for (const issue of allIssues) {
+      feedback += `\n- [${issue.field}] ${issue.rule}: ${issue.suggestion}`
+    }
+    feedback += `\n\nPlease regenerate: ${fieldsToRegenerate.join(', ')}`
+  }
+
+  return {
+    isValid,
+    feedback,
+    fieldsToRegenerate,
+    issues: allIssues,
+  }
+}
