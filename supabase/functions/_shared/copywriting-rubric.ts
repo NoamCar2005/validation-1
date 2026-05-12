@@ -1,4 +1,5 @@
-import type { CopywriterOutput, BusinessProfile, PostType } from './types.ts'
+import type { CopywriterOutput } from './generate-post.ts'
+import type { BusinessProfile, PostType } from './types.ts'
 
 export interface RubricEvaluationResult {
   isValid: boolean
