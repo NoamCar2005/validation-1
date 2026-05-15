@@ -3,6 +3,12 @@
 import type { BusinessProfile, MarketingPlan } from './types.ts'
 import { callGeminiWithRetry, parseJsonOutput } from './summarize.ts'
 
+export interface PriorPost {
+  post_type: 'value' | 'trust' | 'cta'
+  content: string
+  copy: string
+}
+
 export const PLAN_SYSTEM_PROMPT = `You are a senior Hebrew marketing strategist with years of experience. You plan social media content for Israeli business owners.
 
 You will receive a structured business profile. Plan exactly 3 social media posts:
@@ -45,11 +51,32 @@ const PLAN_SCHEMA = {
   required: ['value_post', 'trust_post', 'cta_post'],
 }
 
+export function buildPlanUserMessage(
+  businessProfile: BusinessProfile,
+  priorPosts: PriorPost[],
+): string {
+  const base = `Business profile:\n${JSON.stringify(businessProfile)}\n\nCreate the 3-post marketing plan.`
+  if (priorPosts.length === 0) return base
+
+  const formatted = priorPosts
+    .map(p => `[${p.post_type.toUpperCase()}]\ncontent: ${p.content}\ncopy: ${p.copy}`)
+    .join('\n\n')
+
+  return `${base}
+
+The user has previously received the following posts:
+---
+${formatted}
+---
+Generate a marketing plan with fundamentally different angles, hooks, personal stories, and emotional tones from what is shown above. Do not repeat themes, phrasing, or examples from the prior posts. The voice should still feel like the same business owner, but the content must feel genuinely new.`
+}
+
 export async function plan(
   businessProfile: BusinessProfile,
   geminiApiKey: string,
+  priorPosts: PriorPost[] = [],
 ): Promise<MarketingPlan> {
-  const userMessage = `Business profile:\n${JSON.stringify(businessProfile)}\n\nCreate the 3-post marketing plan.`
+  const userMessage = buildPlanUserMessage(businessProfile, priorPosts)
 
   const body = {
     system_instruction: { parts: [{ text: PLAN_SYSTEM_PROMPT }] },

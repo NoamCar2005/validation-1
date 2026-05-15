@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import type { SurveyAnswer, GeneratedPost, PostType } from './types.ts'
 import { scrape } from './scrape.ts'
 import { summarize } from './summarize.ts'
-import { plan } from './plan.ts'
+import { plan, type PriorPost } from './plan.ts'
 import { generateValidatedPostCopy } from './validate-post.ts'
 import { humanizePost } from './humanize.ts'
 import { generateImage } from './generate-image.ts'
@@ -21,6 +21,7 @@ export async function runPipeline(
   geminiApiKey: string,
   supabaseUrl: string,
   supabaseServiceKey: string,
+  priorPosts: PriorPost[] = [],
 ): Promise<PipelineResult> {
   const diag = new Diagnostics(supabaseUrl, supabaseServiceKey, userId)
   diag.log('pipeline', 'info', 'start', { websiteUrl, surveyAnswersCount: surveyAnswers.length, hasGeminiKey: !!geminiApiKey })
@@ -47,8 +48,8 @@ export async function runPipeline(
 
     // Stage 3: Plan
     const t2 = Date.now()
-    const marketingPlan = await plan(businessProfile, geminiApiKey)
-    diag.log('plan', 'info', `done ${Date.now() - t2}ms`)
+    const marketingPlan = await plan(businessProfile, geminiApiKey, priorPosts)
+    diag.log('plan', 'info', `done ${Date.now() - t2}ms priorPostsCount=${priorPosts.length}`)
 
     // Stage 4: Generate all 3 posts in parallel
     const t3 = Date.now()
