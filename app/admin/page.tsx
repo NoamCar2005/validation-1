@@ -122,7 +122,7 @@ export default function AdminPage() {
                 <span>waitlist: <strong>{r.waitlist_joined ? '✓' : '–'}</strong></span>
                 <span>posts: <strong>{Number(r.post_count)}</strong></span>
               </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div dir="ltr" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <button
                   onClick={() => applyCredits(r.id, r.generations_remaining - 1)}
                   disabled={r.generations_remaining <= 0}
