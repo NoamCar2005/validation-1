@@ -26,7 +26,7 @@ declare
   v_remaining int;
 begin
   select id, waitlist_joined into v_user_id, v_was_joined
-  from users where auth_user_id = auth.uid();
+  from users where auth_user_id = auth.uid() for update;
 
   if v_user_id is null then
     raise exception 'user not found';
