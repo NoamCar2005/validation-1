@@ -7,6 +7,7 @@ create or replace function is_admin_caller()
 returns boolean
 language sql
 stable
+set search_path = public
 as $$
   select coalesce(
     (auth.jwt() ->> 'email'),
@@ -16,6 +17,8 @@ as $$
     'noambusiness0405@gmail.com'
   );
 $$;
+
+revoke execute on function is_admin_caller() from public, anon, authenticated;
 
 create or replace function admin_search_users(query text)
 returns table (
