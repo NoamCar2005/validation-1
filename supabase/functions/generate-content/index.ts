@@ -18,27 +18,42 @@ Deno.serve(async (req) => {
     })
   }
 
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const geminiApiKey = Deno.env.get('GEMINI_API_KEY')!
+
+  const authed = await authenticate(req, supabaseUrl, supabaseAnonKey, supabaseServiceKey)
+  if (!authed) {
+    return new Response(JSON.stringify({ error: 'לא מורשה' }), {
+      status: 401,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+
+  try { await req.json() } catch { /* empty body is fine */ }
+
+  const admin = createClient(supabaseUrl, supabaseServiceKey)
+
+  const { data: remaining, error: rpcErr } = await admin
+    .rpc('consume_generation_credit', { p_user_id: authed.userRowId })
+
+  if (rpcErr) {
+    console.error('[generate-content] credit decrement failed:', rpcErr.message)
+    return new Response(JSON.stringify({ error: 'שגיאה. אנא נסה שוב.' }), {
+      status: 500,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+  if (remaining === null) {
+    return new Response(JSON.stringify({ error: 'no_credits' }), {
+      status: 402,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY')!
-
-    // 1) Verify JWT and load the caller's public.users row.
-    const authed = await authenticate(req, supabaseUrl, supabaseAnonKey, supabaseServiceKey)
-    if (!authed) {
-      return new Response(JSON.stringify({ error: 'לא מורשה' }), {
-        status: 401,
-        headers: { ...cors, 'Content-Type': 'application/json' },
-      })
-    }
-
-    // Drain (but ignore) the body so older clients that still send user_id don't break.
-    try { await req.json() } catch { /* empty body is fine */ }
-
-    // 2) Fetch survey answers using the AUTHENTICATED user's row id.
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
-    const { data: surveyRows } = await supabase
+    const { data: surveyRows } = await admin
       .from('survey_responses')
       .select('question_key, answer_text')
       .eq('user_id', authed.userRowId)
@@ -48,7 +63,12 @@ Deno.serve(async (req) => {
       value: r.answer_text,
     }))
 
-    // 3) Run pipeline.
+    const { data: priorPosts } = await admin
+      .from('posts')
+      .select('post_type, content, copy')
+      .eq('user_id', authed.userRowId)
+      .order('generated_at', { ascending: true })
+
     const { posts } = await runPipeline(
       authed.websiteUrl,
       surveyAnswers,
@@ -56,6 +76,7 @@ Deno.serve(async (req) => {
       geminiApiKey,
       supabaseUrl,
       supabaseServiceKey,
+      (priorPosts ?? []) as Array<{ post_type: 'value' | 'trust' | 'cta'; content: string; copy: string }>,
     )
 
     return new Response(JSON.stringify({ posts }), {
@@ -66,16 +87,17 @@ Deno.serve(async (req) => {
     const rawMessage = err instanceof Error ? err.message : String(err)
     console.error('[generate-content] FATAL:', rawMessage, err instanceof Error ? err.stack : '')
 
+    const { error: refundErr } = await admin
+      .rpc('refund_generation_credit', { p_user_id: authed.userRowId })
+    if (refundErr) {
+      console.error('[generate-content] REFUND FAILED:', refundErr.message)
+    }
+
     const stageMatch = rawMessage.match(/\[stage:([^\]]+)\]/)
     const stage = stageMatch ? stageMatch[1] : 'unknown'
 
-    // Never return raw stack/error to the client. Stage tag is a fixed enum,
-    // safe to surface for support routing. Details stay in server logs only.
     return new Response(
-      JSON.stringify({
-        error: 'שגיאה ביצירת התוכן. אנא נסה שוב.',
-        stage,
-      }),
+      JSON.stringify({ error: 'שגיאה ביצירת התוכן. אנא נסה שוב.', stage }),
       { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } }
     )
   }
