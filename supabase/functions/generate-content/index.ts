@@ -63,11 +63,14 @@ Deno.serve(async (req) => {
       value: r.answer_text,
     }))
 
-    const { data: priorPosts } = await admin
+    const { data: priorPosts, error: priorPostsErr } = await admin
       .from('posts')
       .select('post_type, content, copy')
       .eq('user_id', authed.userRowId)
       .order('generated_at', { ascending: true })
+    if (priorPostsErr) {
+      console.error('[generate-content] priorPosts fetch failed:', priorPostsErr.message)
+    }
 
     const { posts } = await runPipeline(
       authed.websiteUrl,
