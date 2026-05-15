@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import OutOfCreditsPanel from '@/components/OutOfCreditsPanel'
 
 const MOCK_POSTS = [
   {
@@ -500,12 +501,26 @@ export default function LandingPage() {
   const [focused, setFocused] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [outOfCredits, setOutOfCredits] = useState<null | { alreadyJoined: boolean }>(null)
+  const [remainingDisplay, setRemainingDisplay] = useState<number | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) router.replace('/auth')
     })
   }, [router, supabase.auth])
+
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      const { data } = await supabase
+        .from('users')
+        .select('generations_remaining')
+        .eq('auth_user_id', user.id)
+        .maybeSingle()
+      if (data) setRemainingDisplay(data.generations_remaining ?? 0)
+    })
+  }, [supabase])
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -532,12 +547,11 @@ export default function LandingPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/auth'); return }
 
-      const { data: existing, error: lookupError } = await supabase
+      const { data: existing } = await supabase
         .from('users')
-        .select('id, website_url')
+        .select('id, website_url, survey_completed, generations_remaining, waitlist_joined')
         .eq('auth_user_id', user.id)
         .maybeSingle()
-      if (lookupError) console.warn('user lookup failed', lookupError)
 
       const urlChanged = !!existing && existing.website_url !== cleanUrl
 
@@ -551,14 +565,23 @@ export default function LandingPage() {
           },
           { onConflict: 'auth_user_id' }
         )
-        .select('id')
+        .select('id, survey_completed, generations_remaining, waitlist_joined')
         .single()
 
       if (dbError) throw dbError
 
       localStorage.setItem('user_id', data.id)
       localStorage.setItem('website_url', cleanUrl)
-      router.push('/survey')
+
+      // Out-of-credits: show inline panel, do not route forward.
+      if (data.generations_remaining <= 0) {
+        setOutOfCredits({ alreadyJoined: !!data.waitlist_joined })
+        return
+      }
+
+      // Has credit + survey already filled in → skip survey.
+      const effectiveSurveyDone = urlChanged ? false : !!data.survey_completed
+      router.push(effectiveSurveyDone ? '/loading' : '/survey')
     } catch {
       setError('אירעה שגיאה. אנא נסה שוב.')
     } finally {
@@ -617,6 +640,19 @@ export default function LandingPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {remainingDisplay !== null && (
+              <div style={{
+                fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+                color: remainingDisplay > 0 ? '#3DDC84' : 'rgba(255,255,255,0.4)',
+                background: remainingDisplay > 0
+                  ? 'rgba(37,211,102,0.1)'
+                  : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${remainingDisplay > 0 ? 'rgba(37,211,102,0.2)' : 'rgba(255,255,255,0.1)'}`,
+                borderRadius: 100, padding: '4px 11px',
+              }}>
+                {remainingDisplay > 0 ? `${remainingDisplay} יצירה זמינה` : 'אין יצירות'}
+              </div>
+            )}
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', display: 'flex', alignItems: 'center', gap: 6 }}>
               <span className="glow-pulse" style={{
                 width: 6, height: 6, borderRadius: '50%',
@@ -690,71 +726,77 @@ export default function LandingPage() {
             מדביקים קישור לאתר שלך. המערכת שלנו קוראת את העסק ויוצרת 3 פוסטים מוכנים לפרסום — בסגנון שלך, בעברית, בלי לכתוב אף מילה.
           </p>
 
-          {/* Contained input (design style) */}
-          <form onSubmit={handleSubmit} className="hero-line" style={{ marginBottom: 20 }}>
-            <div style={{
-              display: 'flex', flexWrap: 'wrap',
-              maxWidth: 560, margin: '0 auto',
-              background: focused ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.06)',
-              border: focused ? '1.5px solid var(--accent)' : '1.5px solid rgba(255,255,255,0.14)',
-              borderRadius: 18, padding: 6,
-              boxShadow: focused ? '0 0 0 4px rgba(232,98,40,0.15)' : 'none',
-              transition: 'all 0.2s ease',
-            }}>
-              <div style={{
-                flex: '1 1 220px', minWidth: 200,
-                display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px',
+          {/* Contained input (design style) or out-of-credits panel */}
+          {outOfCredits ? (
+            <OutOfCreditsPanel alreadyJoined={outOfCredits.alreadyJoined} />
+          ) : (
+            <>
+              <form onSubmit={handleSubmit} className="hero-line" style={{ marginBottom: 20 }}>
+                <div style={{
+                  display: 'flex', flexWrap: 'wrap',
+                  maxWidth: 560, margin: '0 auto',
+                  background: focused ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.06)',
+                  border: focused ? '1.5px solid var(--accent)' : '1.5px solid rgba(255,255,255,0.14)',
+                  borderRadius: 18, padding: 6,
+                  boxShadow: focused ? '0 0 0 4px rgba(232,98,40,0.15)' : 'none',
+                  transition: 'all 0.2s ease',
+                }}>
+                  <div style={{
+                    flex: '1 1 220px', minWidth: 200,
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px',
+                  }}>
+                    <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, whiteSpace: 'nowrap' }}>https://</span>
+                    <input
+                      ref={inputRef}
+                      type="text" value={url}
+                      onChange={e => setUrl(e.target.value)}
+                      onFocus={() => setFocused(true)}
+                      onBlur={() => setFocused(false)}
+                      placeholder="yoursite.co.il"
+                      dir="ltr"
+                      disabled={loading}
+                      style={{
+                        flex: 1, border: 'none', background: 'transparent',
+                        color: 'white', fontSize: 16,
+                        padding: '14px 0', minWidth: 0,
+                        fontFamily: 'inherit', fontWeight: 500,
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading || !url.trim()}
+                    style={{
+                      background: !loading && url.trim() ? 'var(--accent)' : 'rgba(255,255,255,0.1)',
+                      color: !loading && url.trim() ? 'var(--navy)' : 'rgba(255,255,255,0.4)',
+                      border: 'none', borderRadius: 14,
+                      padding: '14px 22px',
+                      fontWeight: 800, fontSize: 15,
+                      whiteSpace: 'nowrap', fontFamily: 'inherit',
+                      boxShadow: !loading && url.trim() ? 'var(--shadow-btn-accent)' : 'none',
+                      transition: 'all .25s', cursor: 'pointer',
+                    }}
+                  >
+                    {loading ? '...' : 'צור לי 3 פוסטים עכשיו ⚡'}
+                  </button>
+                </div>
+              </form>
+
+              {error && (
+                <p style={{ marginBottom: 12, color: '#fca5a5', fontSize: 14 }}>{error}</p>
+              )}
+
+              <div className="hero-line" style={{
+                fontSize: 12.5, color: 'rgba(255,255,255,0.4)',
+                display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 18,
               }}>
-                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, whiteSpace: 'nowrap' }}>https://</span>
-                <input
-                  ref={inputRef}
-                  type="text" value={url}
-                  onChange={e => setUrl(e.target.value)}
-                  onFocus={() => setFocused(true)}
-                  onBlur={() => setFocused(false)}
-                  placeholder="yoursite.co.il"
-                  dir="ltr"
-                  disabled={loading}
-                  style={{
-                    flex: 1, border: 'none', background: 'transparent',
-                    color: 'white', fontSize: 16,
-                    padding: '14px 0', minWidth: 0,
-                    fontFamily: 'inherit', fontWeight: 500,
-                    outline: 'none',
-                  }}
-                />
+                <span>✓ חינם לחלוטין</span>
+                <span>✓ מוכן תוך 2 דקות</span>
+                <span>✓ 100% עברית</span>
               </div>
-              <button
-                type="submit"
-                disabled={loading || !url.trim()}
-                style={{
-                  background: !loading && url.trim() ? 'var(--accent)' : 'rgba(255,255,255,0.1)',
-                  color: !loading && url.trim() ? 'var(--navy)' : 'rgba(255,255,255,0.4)',
-                  border: 'none', borderRadius: 14,
-                  padding: '14px 22px',
-                  fontWeight: 800, fontSize: 15,
-                  whiteSpace: 'nowrap', fontFamily: 'inherit',
-                  boxShadow: !loading && url.trim() ? 'var(--shadow-btn-accent)' : 'none',
-                  transition: 'all .25s', cursor: 'pointer',
-                }}
-              >
-                {loading ? '...' : 'צור לי 3 פוסטים עכשיו ⚡'}
-              </button>
-            </div>
-          </form>
-
-          {error && (
-            <p style={{ marginBottom: 12, color: '#fca5a5', fontSize: 14 }}>{error}</p>
+            </>
           )}
-
-          <div className="hero-line" style={{
-            fontSize: 12.5, color: 'rgba(255,255,255,0.4)',
-            display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 18,
-          }}>
-            <span>✓ חינם לחלוטין</span>
-            <span>✓ מוכן תוך 2 דקות</span>
-            <span>✓ 100% עברית</span>
-          </div>
         </div>
 
         {/* Stats strip */}
