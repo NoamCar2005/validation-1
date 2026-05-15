@@ -72,6 +72,17 @@ export async function summarize(
 const RETRYABLE = new Set([429, 500, 502, 503, 504])
 const MAX_ATTEMPTS_PER_MODEL = 3
 const RETRY_DELAYS_MS = [0, 1500, 4000]
+const FETCH_TIMEOUT_MS = 30_000
+
+async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS)
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal })
+  } finally {
+    clearTimeout(timer)
+  }
+}
 
 export interface GeminiResult {
   text: string
@@ -95,7 +106,7 @@ export async function callGeminiWithRetry(
 
       let res: Response
       try {
-        res = await fetch(modelUrl(model), {
+        res = await fetchWithTimeout(modelUrl(model), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

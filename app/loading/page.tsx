@@ -7,6 +7,10 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import LoadingMessages from '@/components/LoadingMessages'
 
+// Stable singleton — prevents the supabase reference from changing on every
+// render, which would cause the effect to re-run and kill the progress bar.
+const supabase = createClient()
+
 function ScannerVisualization({ stage }: { stage: number }) {
   const [websiteUrl, setWebsiteUrl] = useState('yoursite.co.il')
   useEffect(() => {
@@ -112,43 +116,41 @@ function ScannerVisualization({ stage }: { stage: number }) {
 
 export default function LoadingPage() {
   const router = useRouter()
-  const supabase = createClient()
-  const called = useRef(false)
   const startTime = useRef(0)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const redirectRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [progress, setProgress] = useState(0)
   const [finishing, setFinishing] = useState(false)
 
-  // Map progress to visual stage for scanner
   const stage = progress < 25 ? 0 : progress < 50 ? 1 : progress < 75 ? 2 : 3
 
   useEffect(() => {
     const userId = localStorage.getItem('user_id')
     if (!userId) { router.replace('/'); return }
-    if (called.current) return
-    called.current = true
+
+    // AbortController replaces the mounted/called pattern.
+    // In React Strict Mode (dev), cleanup fires immediately and aborts the first
+    // run, then the effect re-runs cleanly. In production, abort only fires when
+    // the user actually navigates away (e.g. clicks exit).
+    const abort = new AbortController()
     startTime.current = Date.now()
 
-    let mounted = true
-
-    const startDelay = setTimeout(() => {
-      if (!mounted) return
-      intervalRef.current = setInterval(() => {
-        const elapsed = Date.now() - startTime.current
-        setProgress(Math.min(99, (elapsed / 90000) * 99))
-      }, 400)
-    }, 150)
+    intervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime.current
+      setProgress(Math.min(99, (elapsed / 90000) * 99))
+    }, 400)
 
     async function generate() {
       try {
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
         const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
         const { data: { session } } = await supabase.auth.getSession()
+        if (abort.signal.aborted) return
+
         const accessToken = session?.access_token
         if (!accessToken) {
           localStorage.setItem('generation_error', 'יש להתחבר מחדש')
-          router.replace('/auth')
+          if (!abort.signal.aborted) router.replace('/auth')
           return
         }
 
@@ -160,20 +162,23 @@ export default function LoadingPage() {
             'apikey': supabaseAnonKey,
           },
           body: JSON.stringify({}),
+          signal: abort.signal,
         })
+        if (abort.signal.aborted) return
 
         const data = await res.json()
-
         if (!res.ok || data.error) {
           localStorage.setItem('generation_error', data.error || 'שגיאה לא ידועה')
         } else {
           localStorage.setItem('generated_posts', JSON.stringify(data.posts))
         }
       } catch {
+        if (abort.signal.aborted) return
         localStorage.setItem('generation_error', 'שגיאה ביצירת התוכן. אנא נסה שוב.')
       }
 
-      if (!mounted) return
+      if (abort.signal.aborted) return
+
       if (intervalRef.current) clearInterval(intervalRef.current)
       setFinishing(true)
       setProgress(100)
@@ -183,12 +188,11 @@ export default function LoadingPage() {
     generate()
 
     return () => {
-      mounted = false
-      clearTimeout(startDelay)
+      abort.abort()
       if (intervalRef.current) clearInterval(intervalRef.current)
       if (redirectRef.current) clearTimeout(redirectRef.current)
     }
-  }, [router, supabase])
+  }, [router])
 
   return (
     <div

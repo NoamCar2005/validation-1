@@ -4,16 +4,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import type { PostType, Channel } from './types.ts'
 import type { Diagnostics } from './diagnostics.ts'
 
-// Nano Banana Pro (gemini-3-pro-image-preview) is the primary model for professional asset production.
-// Fallback to faster alternatives if it's temporarily unavailable.
-export const IMAGE_MODELS = [
-  'gemini-3-pro-image-preview',
-  'gemini-3.1-flash-image-preview',
-  'gemini-2.5-flash-image',
-]
+export const IMAGE_MODEL = 'gemini-2.5-flash-preview-05-20'
 
-const GEMINI_URL = (model: string) =>
-  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent`
 
 const ASPECT_RATIO: Record<Channel, string> = {
   instagram: '1:1',
@@ -21,8 +14,7 @@ const ASPECT_RATIO: Record<Channel, string> = {
   facebook: '4:3',
 }
 
-const RETRYABLE = new Set([429, 500, 502, 503, 504])
-const FETCH_TIMEOUT_MS = 60_000
+const FETCH_TIMEOUT_MS = 30_000
 
 export function buildImagePrompt(imageDirection: string, channel: Channel): string {
   const ratio = ASPECT_RATIO[channel]
@@ -82,73 +74,44 @@ export async function generateImage(
   }
 
   let imagePart: { inlineData?: { mimeType?: string; data?: string } } | undefined
-  let workingModel = ''
 
-  // Try each model name; for each, do up to 3 attempts on retryable errors.
-  outer:
-  for (const model of IMAGE_MODELS) {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      if (attempt > 0) {
-        await new Promise(r => setTimeout(r, attempt === 1 ? 1500 : 4000))
-      }
+  try {
+    const res = await fetchWithTimeout(
+      GEMINI_URL,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiApiKey },
+        body: JSON.stringify(body),
+      },
+      FETCH_TIMEOUT_MS,
+    )
 
-      let res: Response
-      try {
-        res = await fetchWithTimeout(
-          GEMINI_URL(model),
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-goog-api-key': geminiApiKey,
-            },
-            body: JSON.stringify(body),
-          },
-          FETCH_TIMEOUT_MS,
-        )
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        diag.log(stage, 'error', `fetch threw model=${model} attempt=${attempt}`, { error: msg })
-        continue
-      }
-
-      if (res.ok) {
-        const data = await res.json().catch(e => ({ _parseError: String(e) }))
-        const candidate = data.candidates?.[0]
-        const parts = candidate?.content?.parts ?? []
-        const promptFeedback = data.promptFeedback
-        const finishReason = candidate?.finishReason
-        imagePart = parts.find(
-          (p: { inlineData?: { mimeType?: string; data?: string } }) =>
-            p.inlineData?.mimeType?.startsWith('image/')
-        )
-        if (imagePart?.inlineData?.data) {
-          workingModel = model
-          diag.log(stage, 'info', `image bytes received model=${model} attempt=${attempt} mime=${imagePart.inlineData.mimeType} bytes_b64=${imagePart.inlineData.data.length}`)
-          break outer
-        }
-        diag.log(stage, 'warn', `200 but no image bytes model=${model} attempt=${attempt}`, {
-          finishReason,
-          promptFeedback,
-          partsKinds: parts.map((p: Record<string, unknown>) => Object.keys(p).join('+')),
-          rawHead: JSON.stringify(data).slice(0, 800),
-        })
-        continue
-      }
-
+    if (!res.ok) {
       const errBody = await res.text()
-      diag.log(stage, 'error', `gemini http ${res.status} model=${model} attempt=${attempt}`, {
-        status: res.status,
-        body: errBody.slice(0, 800),
-      })
-
-      if (!RETRYABLE.has(res.status)) break
+      diag.log(stage, 'error', `gemini http ${res.status}`, { body: errBody.slice(0, 400) })
+      return null
     }
-    diag.log(stage, 'warn', `model exhausted, trying next: ${model}`)
-  }
 
-  if (!imagePart?.inlineData?.data) {
-    diag.log(stage, 'error', 'all models failed; giving up')
+    const data = await res.json().catch(e => ({ _parseError: String(e) }))
+    const parts = data.candidates?.[0]?.content?.parts ?? []
+    imagePart = parts.find(
+      (p: { inlineData?: { mimeType?: string; data?: string } }) =>
+        p.inlineData?.mimeType?.startsWith('image/')
+    )
+
+    if (!imagePart?.inlineData?.data) {
+      diag.log(stage, 'warn', '200 but no image bytes', {
+        finishReason: data.candidates?.[0]?.finishReason,
+        partsKinds: parts.map((p: Record<string, unknown>) => Object.keys(p).join('+')),
+        rawHead: JSON.stringify(data).slice(0, 400),
+      })
+      return null
+    }
+
+    diag.log(stage, 'info', `image ok mime=${imagePart.inlineData.mimeType} bytes_b64=${imagePart.inlineData.data.length}`)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    diag.log(stage, 'error', `fetch threw: ${msg}`)
     return null
   }
 
@@ -167,7 +130,7 @@ export async function generateImage(
     const objectId = crypto.randomUUID()
     const storagePath = `${userId}/${postType}-${objectId}.${ext}`
 
-    diag.log(stage, 'info', `uploading bucket=Validation path=${storagePath} bytes=${bytes.length} mime=${mimeType} model=${workingModel}`)
+    diag.log(stage, 'info', `uploading bucket=Validation path=${storagePath} bytes=${bytes.length} mime=${mimeType}`)
 
     const { error: uploadError } = await supabase.storage
       .from('Validation')
