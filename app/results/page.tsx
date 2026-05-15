@@ -52,6 +52,7 @@ export default function ResultsPage() {
   const [wlPhone, setWlPhone] = useState('')
   const [wlLoading, setWlLoading] = useState(false)
   const [wlDone, setWlDone] = useState(false)
+  const [wlGranted, setWlGranted] = useState(false)
   const [wlError, setWlError] = useState('')
   const [wlFocused, setWlFocused] = useState<string | null>(null)
 
@@ -116,7 +117,7 @@ export default function ResultsPage() {
     setWlLoading(true)
     setWlError('')
 
-    const { error: rpcErr } = await supabase.rpc('join_waitlist', {
+    const { data: rpcData, error: rpcErr } = await supabase.rpc('join_waitlist', {
       p_name: wlName.trim(),
       p_email: wlEmail.trim(),
       p_phone: wlPhone.trim(),
@@ -127,6 +128,8 @@ export default function ResultsPage() {
       setWlError('שגיאה בהרשמה. אנא נסה שוב.')
       return
     }
+    const row = Array.isArray(rpcData) ? rpcData[0] : rpcData
+    setWlGranted(!!row?.granted)
     setWlDone(true)
   }
 
@@ -748,22 +751,26 @@ export default function ResultsPage() {
                     fontSize: 24, fontWeight: 900, color: 'white',
                     letterSpacing: '-0.02em', marginBottom: 12,
                   }}>
-                    יצירה נוספת מחכה לך!
+                    {wlGranted ? 'יצירה נוספת מחכה לך!' : 'נרשמת בהצלחה'}
                   </h3>
                   <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 14, lineHeight: 1.7, marginBottom: 24 }}>
-                    הוספנו לך יצירת פוסט נוספת. צור עכשיו פוסט חדש על העסק שלך.
+                    {wlGranted
+                      ? 'הוספנו לך יצירת פוסט נוספת. צור עכשיו פוסט חדש על העסק שלך.'
+                      : 'כבר נרשמת קודם. ניצור איתך קשר כשהגרסה המלאה תושק.'}
                   </p>
-                  <button
-                    onClick={() => router.push('/loading')}
-                    style={{
-                      padding: '14px 32px', background: 'var(--accent)', color: 'var(--navy)',
-                      border: 'none', borderRadius: 14, fontFamily: 'inherit',
-                      fontWeight: 800, fontSize: 16, cursor: 'pointer',
-                      boxShadow: '0 8px 26px rgba(232,98,40,0.32)',
-                    }}
-                  >
-                    צור פוסט חדש עכשיו ⚡
-                  </button>
+                  {wlGranted && (
+                    <button
+                      onClick={() => router.push('/loading')}
+                      style={{
+                        padding: '14px 32px', background: 'var(--accent)', color: 'var(--navy)',
+                        border: 'none', borderRadius: 14, fontFamily: 'inherit',
+                        fontWeight: 800, fontSize: 16, cursor: 'pointer',
+                        boxShadow: '0 8px 26px rgba(232,98,40,0.32)',
+                      }}
+                    >
+                      צור פוסט חדש עכשיו ⚡
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div style={{
