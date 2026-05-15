@@ -547,11 +547,12 @@ export default function LandingPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/auth'); return }
 
-      const { data: existing } = await supabase
+      const { data: existing, error: lookupError } = await supabase
         .from('users')
         .select('id, website_url, survey_completed, generations_remaining, waitlist_joined')
         .eq('auth_user_id', user.id)
         .maybeSingle()
+      if (lookupError) console.warn('user lookup failed', lookupError)
 
       const urlChanged = !!existing && existing.website_url !== cleanUrl
 
@@ -574,7 +575,7 @@ export default function LandingPage() {
       localStorage.setItem('website_url', cleanUrl)
 
       // Out-of-credits: show inline panel, do not route forward.
-      if (data.generations_remaining <= 0) {
+      if ((data.generations_remaining ?? 0) <= 0) {
         setOutOfCredits({ alreadyJoined: !!data.waitlist_joined })
         return
       }
