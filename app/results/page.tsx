@@ -115,15 +115,18 @@ export default function ResultsPage() {
     }
     setWlLoading(true)
     setWlError('')
-    try {
-      const userId = localStorage.getItem('user_id')
-      if (userId) {
-        await supabase.from('users').update({ email: wlEmail.trim() }).eq('id', userId)
-      }
-    } catch {
-      // non-critical
-    }
+
+    const { error: rpcErr } = await supabase.rpc('join_waitlist', {
+      p_name: wlName.trim(),
+      p_email: wlEmail.trim(),
+      p_phone: wlPhone.trim(),
+    })
+
     setWlLoading(false)
+    if (rpcErr) {
+      setWlError('שגיאה בהרשמה. אנא נסה שוב.')
+      return
+    }
     setWlDone(true)
   }
 
@@ -187,29 +190,8 @@ export default function ResultsPage() {
         background: 'var(--navy)',
         borderBottom: '1px solid rgba(255,255,255,0.07)',
       }}>
-        {/* Back */}
-        <button
-          onClick={() => router.push('/')}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: 'rgba(255,255,255,0.06)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            color: 'rgba(255,255,255,0.55)',
-            fontFamily: 'inherit', fontWeight: 600, fontSize: 13,
-            borderRadius: 9, padding: '7px 13px',
-            cursor: 'pointer', transition: 'all 0.15s',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.11)'
-            e.currentTarget.style.color = 'rgba(255,255,255,0.8)'
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
-            e.currentTarget.style.color = 'rgba(255,255,255,0.55)'
-          }}
-        >
-          ← אתר אחר
-        </button>
+        {/* placeholder to keep header layout balanced after back button removal */}
+        <div style={{ width: 100 }} aria-hidden />
 
         {/* Center: title + badge */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -684,10 +666,10 @@ export default function ResultsPage() {
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 36 }}>
                 {[
+                  { icon: '🎁', label: 'יצירת פוסט נוספת — מיד כשתצטרף' },
                   { icon: '📅', label: 'תוכן שבועי מוכן לפרסום' },
                   { icon: '🚀', label: 'גישה ראשונה לפיצ׳רים חדשים' },
                   { icon: '💬', label: 'קהילת בעלי עסקים ישראלים' },
-                  { icon: '🎁', label: 'שבוע ראשון בגרסה המלאה — חינם' },
                 ].map(item => (
                   <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                     <span style={{
@@ -766,11 +748,22 @@ export default function ResultsPage() {
                     fontSize: 24, fontWeight: 900, color: 'white',
                     letterSpacing: '-0.02em', marginBottom: 12,
                   }}>
-                    אתה בפנים!
+                    יצירה נוספת מחכה לך!
                   </h3>
-                  <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14, lineHeight: 1.7, margin: 0 }}>
-                    ניצור איתך קשר בקרוב עם גישה מוקדמת למערכת המלאה.
+                  <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 14, lineHeight: 1.7, marginBottom: 24 }}>
+                    הוספנו לך יצירת פוסט נוספת. צור עכשיו פוסט חדש על העסק שלך.
                   </p>
+                  <button
+                    onClick={() => router.push('/loading')}
+                    style={{
+                      padding: '14px 32px', background: 'var(--accent)', color: 'var(--navy)',
+                      border: 'none', borderRadius: 14, fontFamily: 'inherit',
+                      fontWeight: 800, fontSize: 16, cursor: 'pointer',
+                      boxShadow: '0 8px 26px rgba(232,98,40,0.32)',
+                    }}
+                  >
+                    צור פוסט חדש עכשיו ⚡
+                  </button>
                 </div>
               ) : (
                 <div style={{
@@ -788,7 +781,7 @@ export default function ResultsPage() {
                   <p style={{
                     color: 'rgba(255,255,255,0.38)', fontSize: 13, lineHeight: 1.55, marginBottom: 24,
                   }}>
-                    הודעה ראשונה כשמשיקים + שבוע חינם כשמתחילים
+                    הצטרף ותקבל יצירת פוסט נוספת — מיידית 🎁
                   </p>
 
                   <form onSubmit={handleWaitlistSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
