@@ -67,7 +67,8 @@ Deno.serve(async (req) => {
       .from('posts')
       .select('post_type, content, copy')
       .eq('user_id', authed.userRowId)
-      .order('generated_at', { ascending: true })
+      .order('generated_at', { ascending: false })
+      .limit(6)
     if (priorPostsErr) {
       console.error('[generate-content] priorPosts fetch failed:', priorPostsErr.message)
     }

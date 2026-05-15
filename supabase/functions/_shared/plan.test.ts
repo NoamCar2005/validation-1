@@ -30,3 +30,11 @@ Deno.test('plan user message contains prior posts and divergence instruction', (
   assertStringIncludes(msg, 'old cta content')
   assertStringIncludes(msg, 'fundamentally different')
 })
+
+Deno.test('plan user message preserves multi-paragraph posts safely (JSON-encoded)', () => {
+  const msg = buildPlanUserMessage(profile, [
+    { post_type: 'value', content: 'שורה ראשונה\n\nשורה שנייה', copy: 'tagline' },
+  ])
+  // Newlines must be JSON-escaped so they cannot corrupt the prompt structure.
+  assertStringIncludes(msg, 'שורה ראשונה\\n\\nשורה שנייה')
+})

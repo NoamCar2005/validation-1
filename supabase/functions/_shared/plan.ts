@@ -58,16 +58,11 @@ export function buildPlanUserMessage(
   const base = `Business profile:\n${JSON.stringify(businessProfile)}\n\nCreate the 3-post marketing plan.`
   if (priorPosts.length === 0) return base
 
-  const formatted = priorPosts
-    .map(p => `[${p.post_type.toUpperCase()}]\ncontent: ${p.content}\ncopy: ${p.copy}`)
-    .join('\n\n')
-
   return `${base}
 
-The user has previously received the following posts:
----
-${formatted}
----
+The user has previously received the following posts (as JSON):
+${JSON.stringify(priorPosts)}
+
 Generate a marketing plan with fundamentally different angles, hooks, personal stories, and emotional tones from what is shown above. Do not repeat themes, phrasing, or examples from the prior posts. The voice should still feel like the same business owner, but the content must feel genuinely new.`
 }
 
