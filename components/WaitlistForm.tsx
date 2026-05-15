@@ -53,7 +53,7 @@ export default function WaitlistForm({ variant = 'dark', onSuccess }: WaitlistFo
         { key: 'phone', label: 'טלפון נייד', type: 'tel', val: phone, set: setPhone, ph: '050-0000000', dir: 'ltr' },
       ].map(field => (
         <div key={field.key}>
-          <label style={{
+          <label htmlFor={`waitlist-${field.key}`} style={{
             display: 'block', fontSize: 11, fontWeight: 700,
             color: isDark ? 'rgba(255,255,255,0.4)' : 'var(--text-muted)',
             letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 7,
@@ -61,6 +61,7 @@ export default function WaitlistForm({ variant = 'dark', onSuccess }: WaitlistFo
             {field.label}
           </label>
           <input
+            id={`waitlist-${field.key}`}
             type={field.type}
             value={field.val}
             onChange={e => { field.set(e.target.value); setError('') }}
