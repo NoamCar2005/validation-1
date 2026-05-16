@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -10,23 +12,37 @@ export default function SurveyPage() {
   const router = useRouter()
   const supabase = createClient()
   const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [loading, setLoading] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [checking, setChecking] = useState(true)
 
   useEffect(() => {
-    if (!localStorage.getItem('user_id')) {
-      router.replace('/')
-    }
-  }, [router])
+    const userId = localStorage.getItem('user_id')
+    if (!userId) { router.replace('/'); return }
 
-  const requiredAnswered = SURVEY_QUESTIONS
-    .filter((q) => q.required)
-    .every((q) => answers[q.key]?.trim())
+    supabase
+      .from('users')
+      .select('survey_completed')
+      .eq('id', userId)
+      .single()
+      .then(({ data, error }) => {
+        if (error) console.warn('survey check failed', error)
+        if (data?.survey_completed) {
+          router.replace('/loading')
+        } else {
+          setChecking(false)
+        }
+      }, () => setChecking(false))
+  }, [router, supabase])
 
-  async function handleSubmit() {
+  async function handleComplete() {
+    const requiredAnswered = SURVEY_QUESTIONS
+      .filter(q => q.required)
+      .every(q => answers[q.key]?.trim())
+
     if (!requiredAnswered) return
 
-    setLoading(true)
+    setSubmitting(true)
     setError('')
 
     const userId = localStorage.getItem('user_id')!
@@ -37,60 +53,37 @@ export default function SurveyPage() {
     }))
 
     try {
-      const { error: insertError } = await supabase
-        .from('survey_responses')
-        .insert(rows)
-
+      const { error: insertError } = await supabase.from('survey_responses').insert(rows)
       if (insertError) throw insertError
 
-      await supabase
-        .from('users')
-        .update({ survey_completed: true })
-        .eq('id', userId)
-
+      await supabase.from('users').update({ survey_completed: true }).eq('id', userId)
       router.push('/loading')
-    } catch (err) {
+    } catch {
       setError('אירעה שגיאה בשמירת התשובות. אנא נסה שוב.')
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
+  if (checking) return null
+
   return (
-    <main className="min-h-screen px-4 py-12" dir="rtl">
-      <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-extrabold text-gray-900 mb-3">
-            נכיר אותך קצת יותר 👋
-          </h1>
-          <p className="text-gray-500 text-base">
-            כדי שנוכל לייצר תוכן שמתאים בדיוק לעסק שלך
-          </p>
+    <>
+      {error && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          background: '#dc2626', color: 'white', borderRadius: 12,
+          padding: '12px 20px', fontSize: 14, fontWeight: 600, zIndex: 9999,
+          boxShadow: '0 8px 24px rgba(220,38,38,0.3)',
+        }}>
+          {error}
         </div>
-
-        <div>
-          <SurveyForm
-            questions={SURVEY_QUESTIONS}
-            answers={answers}
-            onChange={(key, value) => setAnswers((prev) => ({ ...prev, [key]: value }))}
-          />
-
-          {error && <p className="mt-4 text-red-500 text-sm text-center">{error}</p>}
-
-          <div className="mt-10 text-center">
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={!requiredAnswered || loading}
-              className="w-full px-10 py-4 bg-indigo-600 text-white font-bold text-base rounded-xl shadow-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {loading ? 'שומר...' : 'צור לי תוכן עכשיו ←'}
-            </button>
-            <p className="mt-3 text-xs text-gray-400">
-              {SURVEY_QUESTIONS.filter((q) => q.required && answers[q.key]?.trim()).length} / {SURVEY_QUESTIONS.filter((q) => q.required).length} שאלות חובה ענית
-            </p>
-          </div>
-        </div>
-      </div>
-    </main>
+      )}
+      <SurveyForm
+        questions={SURVEY_QUESTIONS}
+        answers={answers}
+        onChange={(key, value) => setAnswers(prev => ({ ...prev, [key]: value }))}
+        onComplete={submitting ? () => {} : handleComplete}
+      />
+    </>
   )
 }

@@ -1,99 +1,108 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+// supabase/functions/generate-content/index.ts
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { runPipeline } from '../_shared/pipeline.ts'
+import { authenticate } from '../_shared/auth.ts'
+import { corsHeaders } from '../_shared/cors.ts'
 
 Deno.serve(async (req) => {
+  const cors = corsHeaders(req)
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: cors })
+  }
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'method not allowed' }), {
+      status: 405,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const geminiApiKey = Deno.env.get('GEMINI_API_KEY')!
+
+  const authed = await authenticate(req, supabaseUrl, supabaseAnonKey, supabaseServiceKey)
+  if (!authed) {
+    return new Response(JSON.stringify({ error: 'לא מורשה' }), {
+      status: 401,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+
+  try { await req.json() } catch { /* empty body is fine */ }
+
+  const admin = createClient(supabaseUrl, supabaseServiceKey)
+
+  const { data: remaining, error: rpcErr } = await admin
+    .rpc('consume_generation_credit', { p_user_id: authed.userRowId })
+
+  if (rpcErr) {
+    console.error('[generate-content] credit decrement failed:', rpcErr.message)
+    return new Response(JSON.stringify({ error: 'שגיאה. אנא נסה שוב.' }), {
+      status: 500,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+  if (remaining === null) {
+    return new Response(JSON.stringify({ error: 'no_credits' }), {
+      status: 402,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
   }
 
   try {
-    const { user_id } = await req.json()
-    if (!user_id) {
-      return new Response(
-        JSON.stringify({ error: 'user_id נדרש' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const n8nWebhookUrl = Deno.env.get('N8N_WEBHOOK_URL')!
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
-    // Fetch user
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id, website_url')
-      .eq('id', user_id)
-      .single()
-
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'משתמש לא נמצא' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Fetch survey answers
-    const { data: surveyRows } = await supabase
+    const { data: surveyRows } = await admin
       .from('survey_responses')
       .select('question_key, answer_text')
-      .eq('user_id', user_id)
+      .eq('user_id', authed.userRowId)
 
-    const survey_answers = (surveyRows ?? []).map((r) => ({
+    const surveyAnswers = (surveyRows ?? []).map(r => ({
       key: r.question_key,
       value: r.answer_text,
     }))
 
-    // Call N8N webhook — wait synchronously
-    const n8nResponse = await fetch(n8nWebhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_id,
-        website_url: user.website_url,
-        survey_answers,
-      }),
-    })
-
-    if (!n8nResponse.ok) {
-      throw new Error(`N8N returned ${n8nResponse.status}`)
+    const { data: priorPosts, error: priorPostsErr } = await admin
+      .from('posts')
+      .select('post_type, content, copy')
+      .eq('user_id', authed.userRowId)
+      .order('generated_at', { ascending: false })
+      .limit(6)
+    if (priorPostsErr) {
+      console.error('[generate-content] priorPosts fetch failed:', priorPostsErr.message)
     }
 
-    // N8N handles content generation, image creation, and inserts posts with image_url into Supabase
-    // We just wait for it to finish, then read the posts directly from the DB
-    await n8nResponse.json()
-
-    const { data: posts, error: fetchError } = await supabase
-      .from('posts')
-      .select('post_type, content, copy, image_url, channel_recommended')
-      .eq('user_id', user_id)
-      .order('id', { ascending: false })
-      .limit(3)
-
-    if (fetchError) throw fetchError
-    if (!posts || posts.length !== 3) throw new Error('Posts not found after generation')
-
-    // Attach image URLs constructed from predictable storage path
-    const postsWithImages = posts.map((p) => ({
-      ...p,
-      image_url: `${supabaseUrl}/storage/v1/object/public/Validation/${user_id}/${p.post_type}.png`,
-    }))
-
-    return new Response(
-      JSON.stringify({ posts: postsWithImages }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    const { posts } = await runPipeline(
+      authed.websiteUrl,
+      surveyAnswers,
+      authed.userRowId,
+      geminiApiKey,
+      supabaseUrl,
+      supabaseServiceKey,
+      (priorPosts ?? []) as Array<{ post_type: 'value' | 'trust' | 'cta'; content: string; copy: string }>,
     )
+
+    return new Response(JSON.stringify({ posts }), {
+      status: 200,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
   } catch (err) {
-    console.error('generate-content error:', err)
+    const rawMessage = err instanceof Error ? err.message : String(err)
+    console.error('[generate-content] FATAL:', rawMessage, err instanceof Error ? err.stack : '')
+
+    const { error: refundErr } = await admin
+      .rpc('refund_generation_credit', { p_user_id: authed.userRowId })
+    if (refundErr) {
+      console.error('[generate-content] REFUND FAILED:', refundErr.message)
+    }
+
+    const stageMatch = rawMessage.match(/\[stage:([^\]]+)\]/)
+    const stage = stageMatch ? stageMatch[1] : 'unknown'
+
     return new Response(
-      JSON.stringify({ error: 'שגיאה ביצירת התוכן. אנא נסה שוב.' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'שגיאה ביצירת התוכן. אנא נסה שוב.', stage }),
+      { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } }
     )
   }
 })

@@ -1,296 +1,116 @@
-# Validation 1 - Content Generation Tool
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+---
 
 ## Project Overview
 
-**Product Name:** Validation 1 (Marketing Content Generator for Israeli Digital Business Owners)
-
-**Core Hypothesis:**
-Israeli digital business owners (coaches, consultants, freelancers, agencies, SaaS, etc.) understand they need to publish marketing content regularly, but lack time and resources to do it efficiently. They want someone to generate marketing content from their existing business — with zero effort on their part.
-
-**Solution:** A free mini-product that scans a landing page/website and generates 3 ready-to-post marketing posts in Hebrew within 60 seconds, matching the business owner's voice and style.
-
-**Success Metrics:**
-1. Immediate "WOW moment" upon seeing generated content
-2. Willingness to provide website/landing page URL
-3. Continuation to survey and community signup
-4. Readiness to pay for full version
+**ContentMine** (product name in UI) is a Hebrew-language AI marketing content generator for Israeli digital business owners. Users paste a website URL, answer a short survey, and receive 3 ready-to-post Hebrew social media posts (value / trust / CTA) generated from their site content.
 
 ---
 
-## Product Specification
+## Commands
 
-### User Journey
-
-**Screen 1: Landing Page**
-- Hero headline: "תן לנו 30 שניות — נחזיר לך שבוע של תוכן"
-- Subheading: "מדביקים קישור לאתר שלך. הבינה המלאכותית מנתחת את העסק שלך ויוצרת 3 פוסטים מוכנים לפרסום — בסגנון שלך, בעברית."
-- Single text input field: "הכנס את כתובת האתר / דף הנחיתה שלך"
-- Primary CTA button: "צור לי תוכן עכשיו"
-- Static mock examples of 3 generated posts below
-- Social proof: "כבר X בעלי עסקים קיבלו תוכן מוכן"
-- **Design:** RTL-enabled, Hebrew-first, professional and clean
-
-**Screen 2: MOM Test Survey**
-- Disguised as "better understanding your business" - appears integrated into the product flow (not external form)
-- Gathers validation data on:
-  - Business type and niche
-  - Current content strategy (if any)
-  - Pain points with content creation
-  - Willingness to pay for full version
-  - Preferred feature set
-- Should feel natural and conversational, not salesy
-
-**Screen 3: Loading State (30-60 seconds)**
-- Animated rotating messages to build anticipation:
-  - "סורק את העסק שלך..."
-  - "מבין את הסגנון שלך..."
-  - "מזהה את נקודות החוזק שלך..."
-  - "יוצר תוכן בקול שלך..."
-- Purpose: Build excitement and sense of magic, not just a spinner
-
-**Screen 4: WOW Screen (Post Showcase)**
-- Headline: "הנה התוכן שלך מוכן לפרסום 🎯"
-- 3 post cards with distinct purposes:
-
-| Post | Type | Purpose |
-|------|------|---------|
-| Post 1 | Value/Tip | Professional insight from their field |
-| Post 2 | Trust-Building | Who they are, why to trust them |
-| Post 3 | CTA (Soft) | Offer/invitation to action |
-
-- Each post card includes:
-  - Full, ready-to-post text
-  - "Copy" button (copy to clipboard)
-  - Recommended channel tag (Instagram/LinkedIn/Facebook)
-
-**Screen 5: Waitlist + Community**
-- Headline: "אתה ברשימה! 🙌"
-- Message: "ניצור איתך קשר כשהגרסה המלאה תעלה. בינתיים — הצטרף לקהילה שלנו בוואטסאפ לטיפים שבועיים ועדכונים ראשונים."
-- Primary CTA: "הצטרף לקבוצת הוואטסאפ"
-- Secondary: "אולי אחר כך"
-
----
-
-## Tech Stack & Architecture
-
-| Layer | Tool | Choice Rationale |
-|-------|------|-----------------|
-| **Frontend** | Next.js + Tailwind CSS | Fast build, RTL support, Vercel deployment, real-time data fetching |
-| **UI/Design** | Tailwind CSS | RTL-friendly, responsive, accessibility-first |
-| **Backend Orchestration** | N8N | Handles website scraping → Claude API → response storage, visual workflow, no backend code needed |
-| **Website Scraping** | N8N HTTP node + HTML parser | Built-in capability, zero additional cost |
-| **AI Model** | Claude API (Sonnet) | Hebrew proficiency, multi-modal context, efficient pricing — runs in N8N, not frontend |
-| **Database** | Supabase | User data, posts (with images + copy), survey responses, real-time subscriptions |
-| **Storage** | Supabase Storage (or CDN) | Image hosting for generated post images |
-| **Analytics** | PostHog (free tier) | Funnel tracking, event funneling, retention analysis |
-| **Deployment** | Vercel | Native Next.js integration, edge functions, automatic scaling |
-| **Development** | Claude Code | This session — primary development harness |
-
----
-
-## Implementation Roadmap
-
-### Phase 1: MVP (Initial Validation)
-1. **Frontend Setup**
-   - Next.js project with Hebrew i18n and RTL layout
-   - Landing page (Screen 1) with input validation
-   - Basic form styling with Tailwind CSS
-   - Pages for loading state, WOW screen, and waitlist signup
-
-2. **N8N Workflow** (Handles Claude API Integration)
-   - HTTP trigger for /api/generate endpoint (receives user website URL)
-   - Website scraper (fetch + parse HTML)
-   - Claude API call for content generation with system prompt
-   - Three distinct post templates (value/trust/CTA)
-   - Voice/style analysis from scraped content
-   - Response formatting and storage in Supabase (posts + images)
-   - Prompt caching for efficient cost
-
-3. **Database Schema**
-   - `users` table (email, website_url, created_at, updated_at, whatsapp_opted_in, survey_completed)
-   - `posts` table (user_id, post_type, content, image_url, post_copy, channel_recommended, generated_at, copied_count)
-   - `survey_responses` table (user_id, question_key, answer_text, answer_value, created_at)
-   - Basic indexing for retrieval and real-time subscriptions
-
-4. **Loading & WOW Screens**
-   - Animated loading messages
-   - Post card display component with image support
-   - Copy-to-clipboard functionality (copies full post + copy)
-   - Channel tag recommendations
-   - Real-time data fetching from Supabase
-
-### Phase 2: Survey & Data Collection
-1. Implement Screen 2 survey flow (disguised as UX)
-2. Supabase storage for survey responses
-3. PostHog event tracking for funnel
-4. WhatsApp integration trigger for waitlist signup
-
-### Phase 3: Polish & Iteration
-1. A/B test loading messages and post formats
-2. Improve scraped content quality filters
-3. Error handling and recovery flows
-4. Mobile responsiveness verification
-
----
-
-## Key Technical Decisions
-
-### Why N8N for Orchestration?
-- Eliminates need for custom backend code in Next.js
-- Visual workflow = easy to debug and modify Claude API calls and scraping logic
-- Built-in HTTP scraping + API integrations (Claude API, Supabase)
-- No additional infrastructure cost
-- Rapid iteration on prompt → response pipeline
-- **Architecture Note:** Claude API integration happens entirely in N8N; frontend only fetches completed posts from Supabase
-
-### Why Claude Sonnet for Content Generation?
-- Strong Hebrew language proficiency
-- Efficient pricing per token
-- Fast response time for UX flow
-- Multi-modal capability (could add images later)
-- Prompt caching support for cost optimization
-
-### Why Supabase Over Firebase?
-- PostgreSQL = flexible schema for complex queries
-- Real-time subscriptions for live updates
-- Row-level security (user isolation)
-- Easy migration path if needed
-- Free tier sufficient for launch
-
-### RTL + Hebrew Considerations
-- Next.js `dir="rtl"` attribute at root level
-- Tailwind CSS flex/grid directions reversed by RTL browser behavior
-- All text content externalized for i18n
-- Form inputs and CTAs positioned for RTL layouts
-- Testing on iOS Safari + Chrome for RTL bugs
-
----
-
-## Data Model
-
-### Users Table
-```
-id (PK)
-email
-website_url
-created_at
-updated_at
-whatsapp_opted_in
-survey_completed
+```bash
+npm run dev       # Start Next.js dev server (localhost:3000)
+npm run build     # Production build
+npm run lint      # ESLint via next lint
 ```
 
-### Posts Table
-```
-id (PK)
-user_id (FK)
-post_type (value | trust | cta)
-content (TEXT) — full post text in Hebrew
-image_url (TEXT) — URL to associated image (if any)
-post_copy (TEXT) — copy/byline text for the post
-channel_recommended (instagram | linkedin | facebook)
-generated_at
-copied_count (for analytics)
+Edge functions run on Deno (Supabase), not Node. Deploy with:
+```bash
+supabase functions deploy generate-content
 ```
 
-### Survey Responses Table
+There is no test runner configured for the frontend. The one test file (`supabase/functions/_shared/validate-post.test.ts`) is a standalone Deno test.
+
+---
+
+## Architecture
+
+### Frontend — Next.js 14 App Router
+
+All pages are in `app/` and use the App Router. Every user-facing page is a client component (`'use client'`). Routing is sequential:
+
 ```
-id (PK)
-user_id (FK)
-question_key
-answer_text
-answer_value (for quantitative)
-created_at
+/auth → / (landing) → /survey → /loading → /results
 ```
 
----
+- **`/auth`** — Supabase magic-link email auth. Session is required to access other pages; `app/page.tsx` redirects to `/auth` if no session.
+- **`/`** — Landing page with URL input. On submit: upserts a `users` row, stores `user_id` in `localStorage`, navigates to `/survey`.
+- **`/survey`** — Multi-block question form driven by `lib/survey-questions.ts`. Saves answers to `survey_responses` table, then navigates to `/loading`.
+- **`/loading`** — Calls the `generate-content` Edge Function directly via fetch. Stores the result (`generated_posts`) or error (`generation_error`) in `localStorage`, then navigates to `/results`.
+- **`/results`** — Reads posts from `localStorage`. Three-tab post viewer (value/trust/CTA) with a shared image on the left and copy button. Includes an inline waitlist form.
 
-## Success Criteria & Validation Gates
+There is no Next.js API routes layer — the frontend calls Supabase Edge Functions directly.
 
-### Gate 1: Product-Market Fit Signal
-- ✅ 50+ websites processed
-- ✅ 70%+ completion rate (landing page → waitlist)
-- ✅ <5% error rate on content generation
-- ✅ Positive sentiment in survey responses
+### Backend — Supabase Edge Functions (Deno)
 
-### Gate 2: Willingness to Pay
-- ✅ Survey shows 40%+ "definitely interested" in paid version
-- ✅ Clear feature requests consistent across respondents
-- ✅ Specific use case patterns emerge (industry, business model)
+Single entry point: `supabase/functions/generate-content/index.ts`
 
-### Gate 3: Community Traction
-- ✅ 30%+ WhatsApp signup rate
-- ✅ Engagement signals (opens, replies)
-- ✅ Referral signups from organic word-of-mouth
+The generation pipeline (`supabase/functions/_shared/pipeline.ts`) runs these stages in sequence:
 
----
+1. **scrape** — fetches the user's website HTML and strips it to plain text
+2. **summarize** — calls Gemini to extract a structured `BusinessProfile` from the scraped text + survey answers
+3. **plan** — calls Gemini to produce a `MarketingPlan` (angle/hook/tone for each of the 3 post types)
+4. **generate + validate** — generates all 3 posts in parallel via `generateValidatedPostCopy()`, which retries up to 3 times if the post fails quality checks (Hebrew-only, word count, paragraph count, emoji limit)
+5. **humanize** — optional Gemini pass to make each post sound more natural; falls back to validated output if it fails
+6. **image** — generates one image for the `value` post only; `trust` and `cta` get `null`
+7. **db-insert** — writes posts to the `posts` table
 
-## Development Notes
+**AI model:** Gemini 2.5 Flash (`gemini-2.5-flash`) with `gemini-2.5-flash-lite` as fallback. The original spec mentions Claude Sonnet, but the implementation uses Gemini via `GEMINI_API_KEY`.
 
-### Constraints & Assumptions
-- **Language:** Hebrew-first, all user-facing text in Hebrew
-- **Target User:** Israeli business owners (30-60 years old, low technical literacy)
-- **Scope:** Mini-product for validation only — no editing UI, no advanced features
-- **Timeline:** Speed to market matters more than polish
-- **Cost:** Free for users, sustainable cost structure (efficient prompting, smart caching)
+All shared types are in `supabase/functions/_shared/types.ts`. The `Diagnostics` class (`_shared/diagnostics.ts`) logs structured pipeline events to Supabase for debugging.
 
-### Known Unknowns (To Test)
-- Website scraping reliability (dynamic vs. static sites)
-- Claude's Hebrew voice consistency across businesses
-- User willingness to share website URLs (privacy concerns?)
-- Optimal loading animation (UX perception of speed)
-- WhatsApp integration mechanics
-- Image generation approach (static images, AI-generated, or none?)
+### Database — Supabase (PostgreSQL)
 
-### Future Considerations (Out of Scope)
-- Post scheduling and social media publishing
-- Multi-language support
-- Team/agency features
-- Custom brand guidelines upload
-- Video content generation
-- SEO optimization for generated posts
+Three tables (see `supabase/migrations/`):
+
+- **`users`** — one row per auth user; stores `website_url`, `email`, `survey_completed`, `auth_user_id` (FK to Supabase auth)
+- **`survey_responses`** — flexible key/value rows per question (`question_key`, `answer_text`)
+- **`posts`** — generated posts with `post_type` (value/trust/cta), `content`, `copy`, `channel_recommended`, `image_url`
+
+The `user_id` stored in `localStorage` is the `users.id` UUID (not the Supabase auth UID). The auth UID is stored in `users.auth_user_id`.
+
+### Supabase Client Helpers
+
+- `lib/supabase/client.ts` — browser client (uses `@supabase/ssr`)
+- `lib/supabase/server.ts` — server client for RSC/middleware
+- `lib/supabase/middleware.ts` — session refresh middleware
 
 ---
 
-## Resources & References
+## Design System
 
-- **Claude API Docs:** https://docs.anthropic.com
-- **N8N Docs:** https://docs.n8n.io
-- **Supabase Docs:** https://supabase.com/docs
-- **Next.js RTL Guide:** https://nextjs.org/docs (search "rtl")
-- **PostHog Analytics:** https://posthog.com/docs
-- **Tailwind RTL Plugin:** https://tailwindcss.com/docs/configuration
+All styling is done with inline `style` props — Tailwind utility classes are not used in practice despite being in the stack. CSS custom properties are defined in `app/globals.css`:
 
----
-
-## Session Checklist
-
-- [ ] Understand product vision and validation hypothesis
-- [ ] Create Next.js project with RTL + Hebrew support
-- [ ] Build landing page (Screen 1) with input validation
-- [ ] Design N8N workflow for orchestration
-- [ ] Integrate Claude API with Hebrew prompt engineering
-- [ ] Create Supabase schema and auth
-- [ ] Build loading and WOW screens
-- [ ] Implement survey flow (Screen 2)
-- [ ] Add copy-to-clipboard and channel recommendations
-- [ ] Test end-to-end funnel
-- [ ] Deploy to Vercel
-- [ ] Set up PostHog tracking
-- [ ] Gather initial user feedback
+- **Colors:** `--navy` (#13100C dark bg), `--accent` (#E86228 terracotta), `--cream`/`--body-bg` (light bg), `--green` (#25D366 WhatsApp)
+- **Fonts:** `--font-display` (Frank Ruhl Libre — headlines), `--font-body` (Heebo — body)
+- The root `<html>` has `lang="he" dir="rtl"`. All UI text is in Hebrew.
 
 ---
 
-## Questions to Resolve
+## Key Constraints
 
-1. **Website Scraping:** Should we handle dynamic content (JavaScript-rendered) or static HTML only?
-2. **Error Recovery:** When scraping fails, do we show an error or suggest URL format alternatives?
-3. **Voice Consistency:** Should we ask users about tone/style preference upfront, or infer from content?
-4. **WhatsApp Integration:** Manual link or API-driven automation?
-5. **Pricing Model:** Freemium (limited posts/month) or upgrade to full product?
-6. **Images for Posts:** Should N8N generate/fetch images for posts, or are text-only posts sufficient for MVP?
-7. **Post Copy Field:** Is "post_copy" a short subtitle/tagline, or a full alternate version of the post?
+- **Hebrew-only content:** The post validation in `validate-post.ts` rejects any Latin characters in `content` or `copy`. Image prompts are intentionally English (passed to the image model).
+- **`localStorage` as state bus:** `user_id`, `website_url`, `generated_posts`, and `generation_error` are passed between pages via `localStorage`, not URL params or React state.
+- **Waitlist WhatsApp URL:** `WHATSAPP_GROUP_URL` in `app/results/page.tsx` is a placeholder (`YOUR_GROUP_LINK`) — must be updated before launch.
+- **Image generation:** Only the `value` post gets an image. The image generation model is configured in `_shared/generate-image.ts`.
 
 ---
 
-**Last Updated:** 2026-05-02
-**Status:** Ready for implementation
+## Environment Variables
+
+Frontend (`.env.local`):
+```
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+```
+
+Edge Function secrets (set via Supabase dashboard or CLI):
+```
+GEMINI_API_KEY=
+SUPABASE_URL=               # auto-injected by Supabase runtime
+SUPABASE_SERVICE_ROLE_KEY=  # auto-injected by Supabase runtime
+```
