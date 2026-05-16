@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import type { PostType, Channel } from './types.ts'
 import type { Diagnostics } from './diagnostics.ts'
 
-export const IMAGE_MODEL = 'gemini-2.5-flash-preview-05-20'
+export const IMAGE_MODEL = 'gemini-2.0-flash-preview-image-generation'
 
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent`
 
@@ -14,7 +14,7 @@ const ASPECT_RATIO: Record<Channel, string> = {
   facebook: '4:3',
 }
 
-const FETCH_TIMEOUT_MS = 30_000
+const FETCH_TIMEOUT_MS = 60_000
 
 export function buildImagePrompt(imageDirection: string, channel: Channel): string {
   const ratio = ASPECT_RATIO[channel]
