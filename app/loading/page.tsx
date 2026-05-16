@@ -142,7 +142,7 @@ export default function LoadingPage() {
 
     async function generate() {
       try {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!.replace(/\/$/, '')
         const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
         const { data: { session } } = await supabase.auth.getSession()
         if (abort.signal.aborted) return
