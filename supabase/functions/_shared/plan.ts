@@ -81,6 +81,7 @@ export async function plan(
       maxOutputTokens: 8192,
       responseMimeType: 'application/json',
       responseSchema: PLAN_SCHEMA,
+      thinkingConfig: { thinkingBudget: 0 },
     },
   }
 

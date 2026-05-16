@@ -45,6 +45,7 @@ export async function humanizePost(
       maxOutputTokens: 8192,
       responseMimeType: 'application/json',
       responseSchema: HUMANIZE_SCHEMA,
+      thinkingConfig: { thinkingBudget: 0 },
     },
   }
 

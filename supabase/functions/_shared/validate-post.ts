@@ -76,6 +76,7 @@ export async function generateValidatedPostCopy(
       maxOutputTokens: 8192,
       responseMimeType: 'application/json',
       responseSchema: POST_SCHEMA,
+      thinkingConfig: { thinkingBudget: 0 },
     },
   }
   const { text: guidedText, finishReason: guidedReason } = await callGeminiWithRetry(geminiApiKey, guidedBody, `validate-guided:${postType}`)

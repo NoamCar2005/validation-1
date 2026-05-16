@@ -124,6 +124,7 @@ export async function generatePostCopy(
         maxOutputTokens: 8192,
         responseMimeType: 'application/json',
         responseSchema: POST_SCHEMA,
+        thinkingConfig: { thinkingBudget: 0 },
       },
     }
 
