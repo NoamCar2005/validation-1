@@ -6,6 +6,8 @@
 const ALLOWED_ORIGINS = new Set<string>([
   'http://localhost:3000',
   'https://contentmine.app',
+  'https://adcraftai.co',
+  'https://www.adcraftai.co',
 ])
 
 const VERCEL_PREVIEW_RE = /^https:\/\/[a-z0-9-]+\.vercel\.app$/
