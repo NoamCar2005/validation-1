@@ -46,6 +46,12 @@ export function validatePost(output: CopywriterOutput, postType: PostType): Vali
     critique.push(`הפוסט קצר מדי — כתוב לפחות ${minWords} מילים (יש כרגע ${wordCount})`)
   }
 
+  // copy (post title) must be at most 2 sentences
+  const copySentences = output.copy.trim().split(/[.!?]+/).filter(s => s.trim().length > 0).length
+  if (copySentences > 2) {
+    critique.push(`כותרת הפוסט ארוכה מדי (${copySentences} משפטים) — כתוב לכל היותר 2 משפטים קצרים`)
+  }
+
   return { valid: critique.length === 0, critique }
 }
 
