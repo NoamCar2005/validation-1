@@ -19,10 +19,12 @@ Instructions:
 Output JSON:
 {
   "content": "...",
-  "copy": "...",
+  "copy": "short post title/hook — max 2 sentences",
   "channel_recommended": "instagram|linkedin|facebook",
   "image_prompt": "..."
-}`
+}
+
+The "copy" field is the post title shown above the post. Keep it to 1-2 short sentences only.`
 
 export const TRUST_POST_SYSTEM_PROMPT = `You are an expert Hebrew social media copywriter for Israeli business owners.
 
@@ -40,10 +42,12 @@ Instructions:
 Output JSON:
 {
   "content": "...",
-  "copy": "...",
+  "copy": "short post title/hook — max 2 sentences",
   "channel_recommended": "instagram|linkedin|facebook",
   "image_prompt": "..."
-}`
+}
+
+The "copy" field is the post title shown above the post. Keep it to 1-2 short sentences only.`
 
 export const CTA_POST_SYSTEM_PROMPT = `You are an expert Hebrew social media copywriter for Israeli business owners.
 
@@ -61,10 +65,12 @@ Instructions:
 Output JSON:
 {
   "content": "...",
-  "copy": "...",
+  "copy": "short post title/hook — max 2 sentences",
   "channel_recommended": "instagram|linkedin|facebook",
   "image_prompt": "..."
-}`
+}
+
+The "copy" field is the post title shown above the post. Keep it to 1-2 short sentences only.`
 
 export const SYSTEM_PROMPTS: Record<PostType, string> = {
   value: VALUE_POST_SYSTEM_PROMPT,
