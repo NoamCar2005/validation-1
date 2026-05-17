@@ -25,6 +25,8 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env.production
+.env.development
 
 # vercel
 .vercel
@@ -36,9 +38,14 @@ next-env.d.ts
 # tooling artifacts
 .playwright-mcp/
 .claude/
+.mcp.json
 
 # internal docs / planning artifacts
-docs/superpowers/plans/
-docs/superpowers/specs/2026-05-08-*
+docs/
+PROGRESS.md
+CLAUDE.md
 supabase/.temp/
 .vscode/
+
+# scratch assets
+results-scroll-hint.png

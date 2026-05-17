@@ -2,7 +2,6 @@
 
 import type { BusinessProfile, PostPlan, PostType, Channel } from './types.ts'
 import { callGeminiWithRetry, parseJsonOutput } from './summarize.ts'
-import { evaluateCopywritingQuality } from './copywriting-rubric.ts'
 
 export const VALUE_POST_SYSTEM_PROMPT = `You are an expert Hebrew social media copywriter for Israeli business owners.
 
@@ -108,40 +107,19 @@ export async function generatePostCopy(
 ): Promise<CopywriterOutput> {
   const systemPrompt = SYSTEM_PROMPTS[postType]
   const userMessage = buildPostUserMessage(postType, businessProfile, postPlan)
-  const maxAttempts = 2
 
-  let lastOutput: CopywriterOutput | null = null
-  let feedbackText = ''
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const contents = lastOutput
-      ? [
-          { role: 'user', parts: [{ text: userMessage }] },
-          { role: 'model', parts: [{ text: JSON.stringify(lastOutput) }] },
-          { role: 'user', parts: [{ text: `The ${postType} post failed copywriting standards. Issues:\n${feedbackText}\n\nPlease fix only the failing field(s) and output the complete JSON again with all four fields.` }] },
-        ]
-      : [{ role: 'user', parts: [{ text: userMessage }] }]
-
-    const body = {
-      system_instruction: { parts: [{ text: systemPrompt }] },
-      contents,
-      generationConfig: {
-        temperature: 0.8,
-        maxOutputTokens: 8192,
-        responseMimeType: 'application/json',
-        responseSchema: POST_SCHEMA,
-        thinkingConfig: { thinkingBudget: 0 },
-      },
-    }
-
-    const { text, finishReason } = await callGeminiWithRetry(geminiApiKey, body, `post:${postType}:attempt${attempt}`)
-    lastOutput = parseJsonOutput<CopywriterOutput>(text, `post:${postType}:attempt${attempt}`, finishReason)
-
-    const evaluation = await evaluateCopywritingQuality(lastOutput, businessProfile, postType)
-    if (evaluation.isValid) return lastOutput
-    feedbackText = evaluation.feedback
+  const body = {
+    system_instruction: { parts: [{ text: systemPrompt }] },
+    contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+    generationConfig: {
+      temperature: 0.8,
+      maxOutputTokens: 8192,
+      responseMimeType: 'application/json',
+      responseSchema: POST_SCHEMA,
+      thinkingConfig: { thinkingBudget: 0 },
+    },
   }
 
-  console.warn(`[post:${postType}] Max regeneration attempts (${maxAttempts}) reached. Returning post despite rubric issues.`)
-  return lastOutput!
+  const { text, finishReason } = await callGeminiWithRetry(geminiApiKey, body, `post:${postType}`)
+  return parseJsonOutput<CopywriterOutput>(text, `post:${postType}`, finishReason)
 }
