@@ -3,9 +3,10 @@
 import type { BusinessProfile, PostPlan, PostType, Channel } from './types.ts'
 import { callGeminiWithRetry, parseJsonOutput } from './summarize.ts'
 
-export const VALUE_POST_SYSTEM_PROMPT = `You are an expert Hebrew social media copywriter for Israeli business owners.
+export const VALUE_POST_SYSTEM_PROMPT = `You are an expert Hebrew social media copywriter for Israeli business owners with years of experince and knowledge.
 
 This is a VALUE post — it shares useful expertise, teaches something valuable, and feels like genuine advice from the owner, not an ad.
+
 
 Instructions:
 - Write entirely in Hebrew (no English words allowed)
@@ -23,7 +24,7 @@ Output JSON:
   "image_prompt": "..."
 }
 
-The "copy" field is the post title shown above the post. Keep it to 1-2 short sentences only.`
+The "copy" field is the post title shown above the post. Keep it to 1-2 short sentences only. Make sure it never exceeds 2 sentences. In the "content" field write the full post. `
 
 export const TRUST_POST_SYSTEM_PROMPT = `You are an expert Hebrew social media copywriter for Israeli business owners.
 
@@ -46,7 +47,7 @@ Output JSON:
   "image_prompt": "..."
 }
 
-The "copy" field is the post title shown above the post. Keep it to 1-2 short sentences only.`
+The "copy" field is the post title shown above the post. Keep it to 1-2 short sentences only. Make sure it never exceeds 2 sentences. In the "content" field write the full post.`
 
 export const CTA_POST_SYSTEM_PROMPT = `You are an expert Hebrew social media copywriter for Israeli business owners.
 
@@ -69,7 +70,7 @@ Output JSON:
   "image_prompt": "..."
 }
 
-The "copy" field is the post title shown above the post. Keep it to 1-2 short sentences only.`
+The "copy" field is the post title shown above the post. Keep it to 1-2 short sentences only. Make sure it never exceeds 2 sentences. In the "content" field write the full post. `
 
 export const SYSTEM_PROMPTS: Record<PostType, string> = {
   value: VALUE_POST_SYSTEM_PROMPT,
