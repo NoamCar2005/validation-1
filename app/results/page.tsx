@@ -84,7 +84,7 @@ export default function ResultsPage() {
   async function handleCopy() {
     if (!activePost) return
     try {
-      await navigator.clipboard.writeText(`${activePost.content}\n\n${activePost.copy}`)
+      await navigator.clipboard.writeText(`${activePost.copy}\n\n${activePost.content}`)
       setCopied(true)
       setTimeout(() => setCopied(false), 2200)
     } catch {
@@ -242,7 +242,7 @@ export default function ResultsPage() {
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </span>
-            {posts.length} פוסטים מוכנים
+            {posts.length} וואריאציות מוכנות
           </div>
           <h1 style={{
             fontFamily: 'var(--font-display)',
