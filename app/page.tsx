@@ -58,7 +58,7 @@ const MOCK_POSTS = [
 const STEPS = [
   { num: '01', title: 'מדביק קישור', desc: 'קישור לאתר או לדף נחיתה שלך. משם כבר אנחנו ניקח את זה', time: '30 שניות' },
   { num: '02', title: 'עונה על שאלות', desc: 'כמה שאלות קצרות על העסק שלך - כדי שהפוסטים ישמעו בדיוק כמוך.', time: '2 דקות' },
-  { num: '03', title: 'מקבל 3 פוסטים', desc: 'ערך, יצירת אמון, וקריאה לפעולה — מוכנים לפרסום מיידי בכל הרשתות.', time: 'מיידי' },
+  { num: '03', title: 'מקבל 3 וואריאציות', desc: 'ערך, יצירת אמון, וקריאה לפעולה — מוכנים לפרסום מיידי בכל הרשתות.', time: 'מיידי' },
 ]
 
 const POST_META: Record<string, { label: string; icon: string; description: string; accentGradient: string }> = {
@@ -698,7 +698,7 @@ export default function LandingPage() {
           }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', display: 'inline-block' }} />
             <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.04em' }}>
-              3 פוסטים בעברית — ב-2 דקות
+              3 וואריאציות בעברית — ב-2 דקות
             </span>
           </div>
 
@@ -724,7 +724,7 @@ export default function LandingPage() {
             lineHeight: 1.7, maxWidth: 480,
             margin: '0 auto 36px',
           }}>
-            מדביקים קישור לאתר שלך. המערכת שלנו קוראת את העסק ויוצרת 3 פוסטים מוכנים לפרסום — בסגנון שלך, בעברית, בלי לכתוב אף מילה.
+            מדביקים קישור לאתר שלך. המערכת שלנו קוראת את העסק ויוצרת 3 וואריאציות פוסט מוכנות לפרסום — בסגנון שלך, בעברית, בלי לכתוב אף מילה.
           </p>
 
           {/* Contained input (design style) or out-of-credits panel */}
@@ -779,7 +779,7 @@ export default function LandingPage() {
                       transition: 'all .25s', cursor: 'pointer',
                     }}
                   >
-                    {loading ? '...' : 'צור לי 3 פוסטים עכשיו ⚡'}
+                    {loading ? '...' : 'צור לי 3 וואריאציות עכשיו ⚡'}
                   </button>
                 </div>
               </form>
@@ -810,7 +810,7 @@ export default function LandingPage() {
           }}>
             {[
               { n: '2 דק׳', l: 'מקישור לפוסט מוכן' },
-              { n: '3', l: 'וואריאציות פוסטים לפרסום   מיידי' },
+              { n: '3', l: 'וואריאציות פוסט לפרסום מיידי' },
               { n: '0', l: 'ניסיון כתיבה נדרש' },
             ].map(s => (
               <div key={s.n} style={{ textAlign: 'center' }}>
