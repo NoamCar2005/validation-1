@@ -62,9 +62,9 @@ const STEPS = [
 ]
 
 const POST_META: Record<string, { label: string; icon: string; description: string; accentGradient: string }> = {
-  value: { label: 'ערך מקצועי', icon: '💡', description: 'ידע שמצב אותך כמומחה', accentGradient: 'linear-gradient(135deg, #E86228 0%, #D45018 100%)' },
-  trust: { label: 'בניית אמון', icon: '🤝', description: 'הסיפור שלך ומדוע לבחור בך', accentGradient: 'linear-gradient(135deg, #E86228 0%, #9B3A14 100%)' },
-  cta: { label: 'קריאה לפעולה', icon: '🎯', description: 'קריאה שמביאה לקוחות', accentGradient: 'linear-gradient(135deg, #25D366 0%, #1DB954 100%)' },
+  value: { label: 'ערך מקצועי', icon: '💡', description: 'ערך שמציג אותך כמומחה', accentGradient: 'linear-gradient(135deg, #E86228 0%, #D45018 100%)' },
+  trust: { label: 'בניית אמון', icon: '🤝', description: 'הסיפור שלך ולמה לבחור בך', accentGradient: 'linear-gradient(135deg, #E86228 0%, #9B3A14 100%)' },
+  cta: { label: 'קריאה לפעולה', icon: '🎯', description: 'קריאה לפעולה שמביאה לקוחות', accentGradient: 'linear-gradient(135deg, #25D366 0%, #1DB954 100%)' },
 }
 
 const CHANNEL_LABEL_MAP: Record<string, string> = {
